@@ -1,0 +1,40 @@
+# Local agent instructions and editor state
+AGENTS.md
+.DS_Store
+.idea/
+.vscode/
+
+# Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.coverage
+.env
+.env.*
+
+# Local datasets, recordings, and generated results
+/outputs/
+data/
+datasets/
+runs/
+*.avi
+*.mp4
+*.mov
+*.mkv
+*.zip
+*.tar
+*.tar.gz
+
+# Model checkpoints and downloads
+checkpoints/
+weights/
+*.pt
+*.pth
+*.onnx
+*.safetensors
+*.part
