@@ -38,7 +38,8 @@ class TrackingAbsenceTests(unittest.TestCase):
         self.assertEqual(self.window.absence_count.text(), "1")
         self.assertEqual(set(self.window._absence_warnings), {3})
         self.assertIn("확인 필요 (01:00)", self.window._items[3].text())
-        self.window.absence_threshold.setValue(90)
+        self.window.absence_threshold.setText("90")
+        self.window.absence_threshold.editingFinished.emit()
         self.assertEqual(self.window.absence_count.text(), "0")
         self.assertFalse(self.window.absence_card.property("warning"))
 
@@ -48,6 +49,25 @@ class TrackingAbsenceTests(unittest.TestCase):
         self.window.update_absences(110, {1: 110, 2: 110})
         self.assertEqual(self.window.absence_count.text(), "0")
         self.assertTrue(self.window._items[2].text().endswith("화면 안"))
+
+    def test_unit_changes_preserve_duration(self):
+        self.window.absence_threshold.setText("90")
+        self.window.absence_threshold.editingFinished.emit()
+        self.window.absence_unit.setCurrentIndex(1)
+        self.assertEqual(self.window.absence_threshold.text(), "1.5")
+        self.assertEqual(self.window._absence_threshold_seconds, 90)
+        self.window.absence_threshold.setText("2")
+        self.window.absence_threshold.editingFinished.emit()
+        self.assertEqual(self.window._absence_threshold_seconds, 120)
+        self.window.absence_unit.setCurrentIndex(0)
+        self.assertEqual(self.window.absence_threshold.text(), "120")
+
+    def test_invalid_input_restores_last_duration(self):
+        for text in ("", "0", "601", "abc"):
+            self.window.absence_threshold.setText(text)
+            self.window.absence_threshold.editingFinished.emit()
+            self.assertEqual(self.window.absence_threshold.text(), "60")
+            self.assertEqual(self.window._absence_threshold_seconds, 60)
 
     def test_reset_clears_count_and_timers(self):
         self.window.update_absences(100, {1: 100, 2: 0, 3: 0})

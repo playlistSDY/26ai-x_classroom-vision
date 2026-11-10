@@ -11,10 +11,10 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 from PySide6.QtCore import QEvent, QPoint, QPointF, QRectF, QSignalBlocker, QSize, Qt, Signal
-from PySide6.QtGui import QBrush, QColor, QFont, QFontDatabase, QFontMetrics, QIcon, QImage, QKeySequence, QPainter, QPainterPath, QPalette, QPen, QPixmap, QShortcut
+from PySide6.QtGui import QBrush, QColor, QDoubleValidator, QFont, QFontDatabase, QFontMetrics, QIcon, QImage, QKeySequence, QPainter, QPainterPath, QPalette, QPen, QPixmap, QShortcut
 from PySide6.QtWidgets import (
-    QAbstractItemView, QApplication, QComboBox, QDialog, QFrame, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
-    QListWidget, QListWidgetItem, QPushButton, QScrollArea, QSizePolicy, QSpinBox, QToolButton, QStyle, QStyledItemDelegate, QStyleOptionToolButton, QStyleOptionViewItem, QStyleOptionComboBox, QStyleOptionSpinBox, QStylePainter, QTableWidget,
+    QAbstractItemView, QApplication, QComboBox, QDialog, QFrame, QHBoxLayout, QHeaderView, QLabel, QLayout, QLineEdit,
+    QListWidget, QListWidgetItem, QPushButton, QScrollArea, QSizePolicy, QSpacerItem, QToolButton, QStyle, QStyledItemDelegate, QStyleOptionToolButton, QStyleOptionViewItem, QStyleOptionComboBox, QStylePainter, QTableWidget,
     QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
@@ -65,20 +65,10 @@ QScrollBar:vertical { background: transparent; width: 5px; margin: 0; }
 QScrollBar::handle:vertical { background: #444650; border-radius: 2px; min-height: 24px; }
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
 QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }
-QLineEdit, QComboBox, QSpinBox {
+QLineEdit, QComboBox {
     background: #2b2e36; color: #f5f5f7; border: 1px solid #383a42;
     border-radius: 7px; padding: 6px 8px; selection-background-color: #5757cc;
 }
-QSpinBox { padding-right: 24px; }
-QSpinBox::up-button {
-    subcontrol-origin: border; subcontrol-position: top right;
-    width: 22px; background: transparent; border: none;
-}
-QSpinBox::down-button {
-    subcontrol-origin: border; subcontrol-position: bottom right;
-    width: 22px; background: transparent; border: none;
-}
-QSpinBox::up-arrow, QSpinBox::down-arrow { image: none; }
 QComboBox { padding-right: 24px; }
 QComboBox::drop-down {
     subcontrol-origin: border; subcontrol-position: top right;
@@ -86,7 +76,7 @@ QComboBox::drop-down {
 }
 QComboBox::down-arrow { image: none; }
 QComboBox QAbstractItemView { background: #1f2025; color: white; selection-background-color: #5757cc; outline: 0; }
-QLineEdit:focus, QSpinBox:focus, QPushButton:focus { border-color: #8787e1; }
+QLineEdit:focus, QPushButton:focus { border-color: #8787e1; }
 QLineEdit:disabled, QPushButton:disabled { color: #9699a4; background: #24262d; }
 QTableWidget { background: #1f2025; alternate-background-color: #24262c; color: #f5f5f7; border: none; }
 QHeaderView::section { background: #2b2e36; color: #c8cad3; border: none; padding: 4px 2px; }
@@ -343,27 +333,6 @@ class _IdentityItemDelegate(_NoFocusItemDelegate):
         painter.restore()
 
 
-class _ThresholdSpinBox(QSpinBox):
-    def paintEvent(self, event):
-        super().paintEvent(event)
-        option = QStyleOptionSpinBox()
-        self.initStyleOption(option)
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.setPen(Qt.PenStyle.NoPen)
-        controls = ((QStyle.SubControl.SC_SpinBoxUp, -1, self.value() < self.maximum()),
-                    (QStyle.SubControl.SC_SpinBoxDown, 1, self.value() > self.minimum()))
-        for control, direction, enabled in controls:
-            rect = self.style().subControlRect(QStyle.ComplexControl.CC_SpinBox, option, control, self)
-            center = rect.center()
-            path = QPainterPath(QPointF(center.x() - 4, center.y() - direction * 2))
-            path.lineTo(center.x() + 4, center.y() - direction * 2)
-            path.lineTo(center.x(), center.y() + direction * 2)
-            path.closeSubpath()
-            painter.setBrush(QColor("#b9bcc8" if enabled and self.isEnabled() else "#626574"))
-            painter.drawPath(path)
-
-
 class _ComparisonComboBox(QComboBox):
     def paintEvent(self, event):
         option = QStyleOptionComboBox()
@@ -371,7 +340,11 @@ class _ComparisonComboBox(QComboBox):
         option.state &= ~QStyle.StateFlag.State_HasFocus
         painter = QStylePainter(self)
         painter.drawComplexControl(QStyle.ComplexControl.CC_ComboBox, option)
-        painter.drawControl(QStyle.ControlElement.CE_ComboBoxLabel, option)
+        painter.setFont(self.font())
+        painter.setPen(self.palette().color(QPalette.ColorRole.Text))
+        text_rect = self.rect().adjusted(10, 0, -28, 0)
+        text = self.fontMetrics().elidedText(self.currentText(), Qt.TextElideMode.ElideRight, text_rect.width())
+        painter.drawText(text_rect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, text)
         arrow = self.style().subControlRect(QStyle.ComplexControl.CC_ComboBox, option,
                                            QStyle.SubControl.SC_ComboBoxArrow, self)
         center = arrow.center()
@@ -539,6 +512,7 @@ class TrackingWindow(QWidget):
         for shortcut in self._quit_shortcuts:
             shortcut.activated.connect(self.close)
         self.name_edit.installEventFilter(self)
+        self.absence_threshold.installEventFilter(self)
         self._selection_changed(None, None)
         self._refresh_absence_warnings()
 
@@ -572,14 +546,25 @@ class TrackingWindow(QWidget):
         cards.addWidget(absence_card, 1)
         layout.addLayout(cards)
 
-        self.absence_threshold = _ThresholdSpinBox()
-        self.absence_threshold.setRange(1, 600)
-        self.absence_threshold.setValue(60)
-        self.absence_threshold.setSuffix("초")
-        self.absence_threshold.setKeyboardTracking(False)
+        self._absence_threshold_seconds = 60.0
+        self._absence_unit_seconds = 1
+        self._displayed_threshold_text = "60"
+        self.absence_threshold = QLineEdit("60")
+        self.absence_threshold.setObjectName("absenceThreshold")
+        self.absence_threshold.setFixedWidth(64)
+        validator = QDoubleValidator(0, 600, 6, self.absence_threshold)
+        validator.setNotation(QDoubleValidator.Notation.StandardNotation)
+        self.absence_threshold.setValidator(validator)
         self.absence_threshold.setAccessibleName("자리 비움 경고 기준 시간")
-        self.absence_threshold.setToolTip("이 시간 동안 화면에 보이지 않는 등록 인원을 경고합니다.")
-        self.absence_threshold.valueChanged.connect(self._refresh_absence_warnings)
+        self.absence_threshold.setToolTip("1초부터 10분까지 입력할 수 있습니다.")
+        self.absence_threshold.editingFinished.connect(self._commit_absence_threshold)
+        self.absence_unit = _ComparisonComboBox()
+        self.absence_unit.setAccessibleName("자리 비움 경고 시간 단위")
+        self.absence_unit.setItemDelegate(_NoFocusItemDelegate(self.absence_unit))
+        self.absence_unit.addItem("초", 1)
+        self.absence_unit.addItem("분", 60)
+        self.absence_unit.setFixedWidth(64)
+        self.absence_unit.currentIndexChanged.connect(self._change_absence_unit)
 
         self.id_list = _IdentityListWidget()
         self.id_list.setObjectName("identityList")
@@ -587,12 +572,12 @@ class TrackingWindow(QWidget):
         self.id_list.setMouseTracking(True)
         self.id_list.setAccessibleName("등록된 사람 ID 목록")
         self.id_list.setUniformItemSizes(True)
+        self.id_list.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
         self.id_list.setTextElideMode(Qt.TextElideMode.ElideRight)
         self.id_list.currentItemChanged.connect(self._selection_changed)
         self.id_list.itemClicked.connect(self._diagnose_selected_identity)
         self.diagnostics = self._diagnostic_panel()
         self.id_list.setFixedHeight(56)
-        self.diagnostics.setMinimumHeight(300)
         people_panel = QWidget()
         people_layout = QVBoxLayout(people_panel)
         people_layout.setContentsMargins(0, 0, 0, 0)
@@ -604,10 +589,12 @@ class TrackingWindow(QWidget):
         details = QWidget()
         details.setObjectName("sidebarDetails")
         details_layout = QVBoxLayout(details)
+        self._details_layout = details_layout
         details_layout.setContentsMargins(0, 0, 0, 0)
         details_layout.setSpacing(6)
         details_layout.addWidget(self.people_section)
-        details_layout.addSpacing(12)
+        self._people_section_gap = QSpacerItem(0, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
+        details_layout.addItem(self._people_section_gap)
         details_layout.addWidget(self.diagnostic_section)
         absence_settings = QWidget()
         absence_settings_layout = QHBoxLayout(absence_settings)
@@ -616,6 +603,7 @@ class TrackingWindow(QWidget):
         absence_settings_label.setProperty("detail", True)
         absence_settings_layout.addWidget(absence_settings_label, 1)
         absence_settings_layout.addWidget(self.absence_threshold)
+        absence_settings_layout.addWidget(self.absence_unit)
         self.absence_section = _Disclosure("자리 비움 경고 설정", absence_settings)
         details_layout.addWidget(self.absence_section)
         self.name_panel = QWidget()
@@ -648,6 +636,7 @@ class TrackingWindow(QWidget):
         editor.addWidget(self.save_button)
         name_layout.addWidget(input_group)
         people_layout.addWidget(self.name_panel)
+        self.people_section.header.toggled.connect(self._sync_people_gap)
         details_layout.addStretch()
         scroll = QScrollArea()
         scroll.setObjectName("detailsScroll")
@@ -674,6 +663,7 @@ class TrackingWindow(QWidget):
         panel.setObjectName("identityDiagnostics")
         panel.setAccessibleName("선택한 사람의 ID 비교")
         layout = QVBoxLayout(panel)
+        layout.setSizeConstraint(QLayout.SizeConstraint.SetMinimumSize)
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(10)
 
@@ -729,13 +719,18 @@ class TrackingWindow(QWidget):
         table.horizontalHeader().ensurePolished()
         table.setMinimumHeight(table.horizontalHeader().sizeHint().height()
                                + table.verticalHeader().length() + 2 * table.frameWidth() + 8)
+        footer = QWidget()
+        footer_layout = QVBoxLayout(footer)
+        footer_layout.setContentsMargins(0, 0, 0, 0)
+        footer_layout.setSpacing(8)
         legend = QLabel("—  점수 없음")
         legend.setProperty("detail", True)
-        layout.addWidget(legend)
+        footer_layout.addWidget(legend)
         self.diagnostic_face_status = QLabel("얼굴 · 미측정")
         self.diagnostic_face_status.setProperty("detail", True)
         self.diagnostic_face_status.setTextFormat(Qt.TextFormat.PlainText)
-        layout.addWidget(self.diagnostic_face_status)
+        footer_layout.addWidget(self.diagnostic_face_status)
+        layout.addWidget(footer)
         return panel
 
     @staticmethod
@@ -756,7 +751,7 @@ class TrackingWindow(QWidget):
         return card, value
 
     def eventFilter(self, watched, event):
-        if watched is self.name_edit and event.type() in (QEvent.Type.FocusIn, QEvent.Type.FocusOut):
+        if watched in (self.name_edit, self.absence_threshold) and event.type() in (QEvent.Type.FocusIn, QEvent.Type.FocusOut):
             for shortcut in self._quit_shortcuts:
                 shortcut.setEnabled(event.type() == QEvent.Type.FocusOut)
         return super().eventFilter(watched, event)
@@ -961,12 +956,33 @@ class TrackingWindow(QWidget):
                                    if person_id in self._items and person_id not in self._visible_ids}
         self._refresh_absence_warnings()
 
+    def _commit_absence_threshold(self):
+        if self.absence_threshold.text() == self._displayed_threshold_text:
+            return
+        value, valid = self.absence_threshold.validator().locale().toDouble(self.absence_threshold.text())
+        seconds = value * self._absence_unit_seconds
+        if valid and 1 <= seconds <= 600:
+            self._absence_threshold_seconds = seconds
+            self._refresh_absence_warnings()
+        self._display_absence_threshold()
+
+    def _display_absence_threshold(self):
+        value = self._absence_threshold_seconds / self._absence_unit_seconds
+        text = self.absence_threshold.validator().locale().toString(value, "g", 6)
+        self._displayed_threshold_text = text
+        self.absence_threshold.setText(text)
+
+    def _change_absence_unit(self):
+        self._commit_absence_threshold()
+        self._absence_unit_seconds = self.absence_unit.currentData()
+        self._display_absence_threshold()
+
     def _refresh_absence_warnings(self):
-        threshold = self.absence_threshold.value()
+        threshold = self._absence_threshold_seconds
         self._absence_warnings = {person_id: elapsed for person_id, elapsed in self._absence_durations.items()
                                   if elapsed >= threshold}
         self.absence_count.setText(str(len(self._absence_warnings)))
-        self.absence_card.setToolTip(f"화면에 {threshold}초 이상 보이지 않는 등록 인원")
+        self.absence_card.setToolTip(f"화면에 {threshold:g}초 이상 보이지 않는 등록 인원")
         warning = bool(self._absence_warnings)
         if self.absence_card.property("warning") != warning:
             self.absence_card.setProperty("warning", warning)
@@ -1013,11 +1029,18 @@ class TrackingWindow(QWidget):
         self._set_name_controls()
         self.name_edit.setText(self._aliases.get(person_id, ""))
 
+    def _sync_people_gap(self):
+        show_gap = self.people_section.header.isChecked() and not self.name_panel.isHidden()
+        self._people_section_gap.changeSize(0, 12 if show_gap else 0,
+                                           QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
+        self._details_layout.invalidate()
+
     def _set_name_controls(self, *, checking=False):
         enabled = self._selected_id is not None and not checking
         title = f"P{self._selected_id:03d} 이름 변경" if enabled else "표시 이름"
         self.name_title.setText("번호 확인 중" if checking else title)
         self.name_panel.setVisible(enabled or checking)
+        self._sync_people_gap()
         self.name_edit.setEnabled(enabled)
         self.save_button.setEnabled(enabled)
 
