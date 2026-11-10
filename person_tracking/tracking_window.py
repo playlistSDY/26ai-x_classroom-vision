@@ -271,7 +271,7 @@ class _MetricLabel(QLabel):
         painter.setPen(self.palette().color(QPalette.ColorRole.WindowText))
         painter.drawText(QPointF(0, baseline), self.text())
         unit_font = QFont(font)
-        unit_font.setPixelSize(12)
+        unit_font.setPixelSize(14)
         unit_font.setWeight(QFont.Weight.Normal)
         painter.setFont(unit_font)
         painter.setPen(QColor("#a4a7b3"))
