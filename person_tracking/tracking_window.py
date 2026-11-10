@@ -14,7 +14,7 @@ from PySide6.QtCore import QEvent, QPoint, QPointF, QRectF, QSignalBlocker, QSiz
 from PySide6.QtGui import QBrush, QColor, QFont, QFontDatabase, QFontMetrics, QIcon, QImage, QKeySequence, QPainter, QPainterPath, QPalette, QPen, QPixmap, QShortcut
 from PySide6.QtWidgets import (
     QAbstractItemView, QApplication, QComboBox, QDialog, QFrame, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
-    QListWidget, QListWidgetItem, QPushButton, QScrollArea, QSizePolicy, QSpinBox, QToolButton, QStyle, QStyledItemDelegate, QStyleOptionViewItem, QStyleOptionComboBox, QStyleOptionSpinBox, QStylePainter, QTableWidget,
+    QListWidget, QListWidgetItem, QPushButton, QScrollArea, QSizePolicy, QSpinBox, QToolButton, QStyle, QStyledItemDelegate, QStyleOptionToolButton, QStyleOptionViewItem, QStyleOptionComboBox, QStyleOptionSpinBox, QStylePainter, QTableWidget,
     QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
@@ -202,8 +202,16 @@ class _ResetDialog(QDialog):
 
 class _DisclosureButton(QToolButton):
     def paintEvent(self, event):
-        super().paintEvent(event)
-        painter = QPainter(self)
+        option = QStyleOptionToolButton()
+        self.initStyleOption(option)
+        option.text = ""
+        painter = QStylePainter(self)
+        painter.drawComplexControl(QStyle.ComplexControl.CC_ToolButton, option)
+        painter.setFont(self.font())
+        painter.setPen(self.palette().color(QPalette.ColorRole.ButtonText))
+        text_rect = self.rect().adjusted(24, 0, -8, 0)
+        text = self.fontMetrics().elidedText(self.text(), Qt.TextElideMode.ElideRight, text_rect.width())
+        painter.drawText(text_rect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, text)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         pen = QPen(QColor("#9696eb" if self.isChecked() else "#a4a7b3"), 1.5)
         pen.setCapStyle(Qt.PenCapStyle.RoundCap)
@@ -225,6 +233,7 @@ class _Disclosure(QFrame):
     def __init__(self, title, content):
         super().__init__()
         self.setObjectName("disclosure")
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
         self.header = _DisclosureButton()
         self.header.setObjectName("disclosureHeader")
         self.header.setText(title)
@@ -233,6 +242,7 @@ class _Disclosure(QFrame):
         self.header.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
         self.header.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.content = content
+        content.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(6)
@@ -572,7 +582,7 @@ class TrackingWindow(QWidget):
         self.id_list.currentItemChanged.connect(self._selection_changed)
         self.id_list.itemClicked.connect(self._diagnose_selected_identity)
         self.diagnostics = self._diagnostic_panel()
-        self.id_list.setFixedHeight(180)
+        self.id_list.setFixedHeight(56)
         self.diagnostics.setMinimumHeight(300)
         people_panel = QWidget()
         people_layout = QVBoxLayout(people_panel)
@@ -922,6 +932,11 @@ class TrackingWindow(QWidget):
                 item.setText(label)
                 item.setToolTip(label)
                 item.setForeground(QBrush(QColor("#f294a9")) if warning else QBrush())
+
+        row_height = max(42, self.id_list.sizeHintForRow(0))
+        list_height = min(180, max(56, self.id_list.count() * row_height + 12))
+        if self.id_list.height() != list_height:
+            self.id_list.setFixedHeight(list_height)
 
     def update_absences(self, timestamp, last_seen):
         self._absence_durations = {person_id: max(0.0, timestamp - seen_at)
