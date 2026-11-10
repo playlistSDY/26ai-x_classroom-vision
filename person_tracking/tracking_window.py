@@ -94,10 +94,10 @@ QPushButton { padding: 7px 12px; border: 1px solid #383a42; border-radius: 7px; 
 QPushButton:hover { background: #353842; }
 QFrame#nameInputGroup { background: #2b2e36; border: 1px solid #383a42; border-radius: 8px; }
 QLineEdit#nameEdit { background: transparent; border: none; padding: 6px 8px; }
-QPushButton#saveNameButton { padding: 0; border-radius: 5px; }
-QPushButton#saveNameButton:enabled { background: #5757cc; border-color: #5757cc; color: #ffffff; }
-QPushButton#saveNameButton:enabled:hover { background: #6868d6; border-color: #6868d6; }
-QPushButton#saveNameButton:enabled:pressed { background: #4848b5; border-color: #4848b5; }
+QPushButton#saveNameButton { padding: 0; border: none; border-radius: 4px; font-size: 12px; font-weight: 600; }
+QPushButton#saveNameButton:enabled { background: transparent; color: #aaaaf2; }
+QPushButton#saveNameButton:enabled:hover { background: #3a3a50; color: #d2d2fa; }
+QPushButton#saveNameButton:enabled:pressed { background: #454563; }
 QPushButton#resetButton { background: transparent; border-color: transparent; border-radius: 8px; padding: 0; }
 QPushButton#resetButton:hover { border-color: #45456d; background: #292941; }
 QPushButton#resetButton:pressed { background: #333351; }
@@ -264,6 +264,18 @@ class _NoFocusItemDelegate(QStyledItemDelegate):
         option.state &= ~QStyle.StateFlag.State_HasFocus
 
 
+class _IdentityListWidget(QListWidget):
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            item = self.itemAt(event.position().toPoint())
+            if item is None or item is self.currentItem():
+                self.clearSelection()
+                self.setCurrentRow(-1)
+                event.accept()
+                return
+        super().mousePressEvent(event)
+
+
 class _MetricLabel(QLabel):
     """Draw the number and its smaller unit on one shared text baseline."""
 
@@ -304,22 +316,19 @@ class _IdentityItemDelegate(_NoFocusItemDelegate):
         painter.setClipRect(option.rect)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         status_font = QFont(option.font)
-        status_font.setPixelSize(11)
+        status_font.setPixelSize(12)
         status_font.setWeight(QFont.Weight.Normal)
         status_metrics = QFontMetrics(status_font)
         right = option.rect.right() - 10
         status_width = status_metrics.horizontalAdvance(status)
         status_left = right - status_width
         painter.setFont(status_font)
-        painter.setPen(QColor("#a4a7b3"))
+        status_color = "#b6b8c3" if status == "화면 안" else "#90939f"
+        if status.startswith("확인 필요"):
+            status_color = "#e5a0b2"
+        painter.setPen(QColor(status_color))
         baseline = option.rect.center().y() + (status_metrics.ascent() - status_metrics.descent()) / 2
         painter.drawText(QPointF(status_left, baseline), status)
-        dot_color = "#7ab89e" if status == "화면 안" else "#757986"
-        if status.startswith("확인 필요"):
-            dot_color = "#f294a9"
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(QColor(dot_color))
-        painter.drawEllipse(QPointF(status_left - 8, option.rect.center().y()), 2.5, 2.5)
         name_font = QFont(option.font)
         name_font.setPixelSize(13)
         name_font.setWeight(QFont.Weight.DemiBold)
@@ -328,7 +337,7 @@ class _IdentityItemDelegate(_NoFocusItemDelegate):
         painter.setPen(QColor("#aaaaf2" if selected else "#e6e7ef"))
         name_metrics = QFontMetrics(name_font)
         left = option.rect.left() + 12
-        text = name_metrics.elidedText(name, Qt.TextElideMode.ElideRight, max(0, status_left - left - 20))
+        text = name_metrics.elidedText(name, Qt.TextElideMode.ElideRight, max(0, status_left - left - 16))
         baseline = option.rect.center().y() + (name_metrics.ascent() - name_metrics.descent()) / 2
         painter.drawText(QPointF(left, baseline), text)
         painter.restore()
@@ -572,7 +581,7 @@ class TrackingWindow(QWidget):
         self.absence_threshold.setToolTip("이 시간 동안 화면에 보이지 않는 등록 인원을 경고합니다.")
         self.absence_threshold.valueChanged.connect(self._refresh_absence_warnings)
 
-        self.id_list = QListWidget()
+        self.id_list = _IdentityListWidget()
         self.id_list.setObjectName("identityList")
         self.id_list.setItemDelegate(_IdentityItemDelegate(self.id_list))
         self.id_list.setMouseTracking(True)
@@ -627,13 +636,13 @@ class TrackingWindow(QWidget):
         self.save_button.clicked.connect(self._save_name)
         input_group = QFrame()
         input_group.setObjectName("nameInputGroup")
-        input_group.setFixedHeight(42)
+        input_group.setFixedHeight(36)
         editor = QHBoxLayout(input_group)
         editor.setContentsMargins(0, 4, 4, 4)
         editor.setSpacing(0)
         self.name_edit.setMinimumWidth(0)
-        self.name_edit.setFixedHeight(32)
-        self.save_button.setFixedSize(50, 32)
+        self.name_edit.setFixedHeight(26)
+        self.save_button.setFixedSize(42, 26)
         editor.addWidget(self.name_edit, 1)
         editor.addWidget(self.save_button)
         name_layout.addWidget(input_group)
@@ -782,7 +791,8 @@ class TrackingWindow(QWidget):
     def _draw_tracks(self):
         return [(box, raw_id, self._label(person_id) + ("  matched" if matched else ""),
                  self._colors[(person_id - 1) % len(self._colors)] if person_id is not None
-                 else QColor("#b7c1ce")) for box, raw_id, person_id, matched in self._visible_tracks]
+                 else QColor("#b7c1ce")) for box, raw_id, person_id, matched in self._visible_tracks
+                if self._selected_id is None or person_id == self._selected_id]
 
     def _record_diagnostics(self, assignments):
         self._visible_raw_ids = {item.raw_id for item in assignments}
@@ -824,6 +834,7 @@ class TrackingWindow(QWidget):
     def _sync_video_selection(self):
         report, visible = self._selected_report()
         self.video.select(report.current.raw_id if report and visible else None)
+        self.video.set_tracks(self._draw_tracks())
 
     def _refresh_diagnostics(self):
         if not self.diagnostic_section.header.isChecked():
