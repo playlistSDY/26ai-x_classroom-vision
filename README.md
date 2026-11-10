@@ -9,7 +9,7 @@
   <img src="docs/assets/tracking-demo.png" alt="Classroom Vision 앱의 사람 추적 박스, 인원 집계, ID 진단 비교표" width="920">
 </p>
 
-<p align="center"><sub>실제 앱 시연 · AIRC-SMARTCLASS 029.avi의 21.84초 화면. 얼굴은 추론 후 시연 이미지에서 가렸습니다.</sub></p>
+<p align="center"><sub>실제 앱 시연 · 팀 제공 수업 영상 IMG_6463.MOV의 15초 지점. 공개용 화면에서는 얼굴을 가렸습니다.</sub></p>
 
 ## 프로젝트 목표
 
@@ -85,7 +85,6 @@ BPBreID의 HRNet 코드에는 [Hippocratic License 3.0](person_tracking/vendor/L
 YuNet과 SFace의 출처 및 이용 조건은 [얼굴 모델 안내](person_tracking/vendor/NOTICE.face-models.md)에
 정리했습니다.
 
-시연 이미지의 영상 출처는 Van Anh Nguyen Thi, Tu Chu Pham Dinh, Son Le Hoang의
-[AIRC-SMARTCLASS Part 2](https://data.mendeley.com/datasets/fw5hs57z78/1)입니다.
-원본의 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)에 따라 출처를 표시했으며,
-프레임에 추적 UI를 덧씌우고 얼굴을 가렸습니다.
+영상 검증에 사용한 `029.avi`는 Van Anh Nguyen Thi, Tu Chu Pham Dinh, Son Le Hoang의
+[AIRC-SMARTCLASS Part 2](https://data.mendeley.com/datasets/fw5hs57z78/1)에 포함돼 있습니다.
+데이터셋은 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)으로 공개됐습니다.
