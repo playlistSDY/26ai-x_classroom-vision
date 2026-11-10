@@ -14,7 +14,7 @@ from PySide6.QtCore import QEvent, QPoint, QPointF, QRectF, QSignalBlocker, QSiz
 from PySide6.QtGui import QBrush, QColor, QFont, QFontDatabase, QFontMetrics, QIcon, QImage, QKeySequence, QPainter, QPainterPath, QPalette, QPen, QPixmap, QShortcut
 from PySide6.QtWidgets import (
     QAbstractItemView, QApplication, QComboBox, QDialog, QFrame, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
-    QListWidget, QListWidgetItem, QPushButton, QScrollArea, QSizePolicy, QSpinBox, QToolButton, QStyle, QStyledItemDelegate, QStyleOptionViewItem, QStyleOptionComboBox, QStyleOptionSpinBox, QStylePainter, QTableWidget,
+    QListWidget, QListWidgetItem, QPushButton, QScrollArea, QSizePolicy, QSpinBox, QToolButton, QStyle, QStyledItemDelegate, QStyleOptionToolButton, QStyleOptionViewItem, QStyleOptionComboBox, QStyleOptionSpinBox, QStylePainter, QTableWidget,
     QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
@@ -202,8 +202,16 @@ class _ResetDialog(QDialog):
 
 class _DisclosureButton(QToolButton):
     def paintEvent(self, event):
-        super().paintEvent(event)
-        painter = QPainter(self)
+        option = QStyleOptionToolButton()
+        self.initStyleOption(option)
+        option.text = ""
+        painter = QStylePainter(self)
+        painter.drawComplexControl(QStyle.ComplexControl.CC_ToolButton, option)
+        painter.setFont(self.font())
+        painter.setPen(self.palette().color(QPalette.ColorRole.ButtonText))
+        text_rect = self.rect().adjusted(24, 0, -8, 0)
+        text = self.fontMetrics().elidedText(self.text(), Qt.TextElideMode.ElideRight, text_rect.width())
+        painter.drawText(text_rect, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, text)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         pen = QPen(QColor("#9696eb" if self.isChecked() else "#a4a7b3"), 1.5)
         pen.setCapStyle(Qt.PenCapStyle.RoundCap)
