@@ -14,7 +14,7 @@ from PySide6.QtCore import QEvent, QPoint, QPointF, QRectF, QSignalBlocker, QSiz
 from PySide6.QtGui import QBrush, QColor, QFont, QFontDatabase, QFontMetrics, QIcon, QImage, QKeySequence, QPainter, QPainterPath, QPen, QPixmap, QShortcut
 from PySide6.QtWidgets import (
     QAbstractItemView, QApplication, QComboBox, QDialog, QFrame, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
-    QListWidget, QListWidgetItem, QPushButton, QScrollArea, QSizePolicy, QToolButton, QStyle, QStyledItemDelegate, QStyleOptionComboBox, QStylePainter, QTableWidget,
+    QListWidget, QListWidgetItem, QPushButton, QScrollArea, QSizePolicy, QSpinBox, QToolButton, QStyle, QStyledItemDelegate, QStyleOptionComboBox, QStylePainter, QTableWidget,
     QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
@@ -55,19 +55,21 @@ QToolButton#disclosureHeader:hover { background: #25262e; color: #f5f5f7; }
 QToolButton#disclosureHeader:checked { color: #d0c8ff; background: #23222c; }
 QFrame#visibleCountCard { background: #252331; border: 1px solid #46405d; }
 QLabel#visibleCount { font-size: 48px; color: #d0c8ff; }
-QFrame#absenceCard { background: #1f2025; border: 1px dashed #40424d; border-radius: 9px; }
-QLabel#absenceValue { font-size: 28px; color: #80838f; }
+QFrame#absenceCard { background: #1f2025; border: 1px solid #383a42; border-radius: 9px; }
+QLabel#absenceValue { font-size: 32px; font-weight: 700; color: #f5f5f7; }
+QFrame#absenceCard[warning="true"] { background: #342a25; border-color: #8a6647; }
+QFrame#absenceCard[warning="true"] QLabel#absenceValue { color: #f4bf79; }
 QLabel#absenceStatus { color: #aba3c4; font-size: 11px; }
 QScrollBar:vertical { background: transparent; width: 5px; margin: 0; }
 QScrollBar::handle:vertical { background: #444650; border-radius: 2px; min-height: 24px; }
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
 QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }
-QLineEdit, QComboBox {
+QLineEdit, QComboBox, QSpinBox {
     background: #2b2e36; color: #f5f5f7; border: 1px solid #383a42;
     border-radius: 7px; padding: 6px 8px; selection-background-color: #453d59;
 }
 QComboBox QAbstractItemView { background: #1f2025; color: white; selection-background-color: #453d59; outline: 0; }
-QLineEdit:focus, QPushButton:focus { border-color: #aaa8ff; }
+QLineEdit:focus, QSpinBox:focus, QPushButton:focus { border-color: #aaa8ff; }
 QLineEdit:disabled, QPushButton:disabled { color: #9699a4; background: #24262d; }
 QTableWidget { background: #1f2025; alternate-background-color: #24262c; color: #f5f5f7; border: none; }
 QHeaderView::section { background: #2b2e36; color: #c8cad3; border: none; padding: 4px 2px; }
@@ -330,6 +332,8 @@ class TrackingWindow(QWidget):
         self._aliases = {}
         self._items = {}
         self._visible_ids = set()
+        self._absence_durations: dict[int, float] = {}
+        self._absence_warnings: dict[int, float] = {}
         self._visible_tracks = []
         self._selected_id = None
         self._diagnostic_raw_id = None
@@ -374,6 +378,7 @@ class TrackingWindow(QWidget):
             shortcut.activated.connect(self.close)
         self.name_edit.installEventFilter(self)
         self._selection_changed(None, None)
+        self._refresh_absence_warnings()
 
     def _sidebar(self):
         panel = QFrame()
@@ -390,7 +395,7 @@ class TrackingWindow(QWidget):
         cards.setSpacing(8)
         cumulative_card, self.cumulative_count = self._count_card("누적 인원", "cumulativeCount")
         cards.addWidget(cumulative_card, 1)
-        absence_card = QFrame()
+        self.absence_card = absence_card = QFrame()
         absence_card.setObjectName("absenceCard")
         absence_layout = QVBoxLayout(absence_card)
         absence_layout.setContentsMargins(11, 8, 11, 8)
@@ -399,17 +404,26 @@ class TrackingWindow(QWidget):
         absence_title.setProperty("metricCaption", True)
         absence_layout.addWidget(absence_title)
         absence_row = QHBoxLayout()
-        absence_value = QLabel("—")
+        self.absence_count = absence_value = QLabel("0")
         absence_value.setObjectName("absenceValue")
-        absence_value.setAccessibleName("자리 비움 경고 인원, 개발 중")
+        absence_value.setAccessibleName("자리 비움 경고 인원")
         absence_row.addWidget(absence_value)
-        absence_row.addStretch()
-        absence_status = QLabel("개발 중")
+        absence_status = QLabel("명")
         absence_status.setObjectName("absenceStatus")
         absence_row.addWidget(absence_status)
+        absence_row.addStretch()
         absence_layout.addLayout(absence_row)
         cards.addWidget(absence_card, 1)
         layout.addLayout(cards)
+
+        self.absence_threshold = QSpinBox()
+        self.absence_threshold.setRange(1, 600)
+        self.absence_threshold.setValue(60)
+        self.absence_threshold.setSuffix("초")
+        self.absence_threshold.setKeyboardTracking(False)
+        self.absence_threshold.setAccessibleName("자리 비움 경고 기준 시간")
+        self.absence_threshold.setToolTip("이 시간 동안 화면에 보이지 않는 등록 인원을 경고합니다.")
+        self.absence_threshold.valueChanged.connect(self._refresh_absence_warnings)
 
         self.id_list = QListWidget()
         self.id_list.setObjectName("identityList")
@@ -438,6 +452,15 @@ class TrackingWindow(QWidget):
         details_layout.setSpacing(6)
         details_layout.addWidget(self.people_section)
         details_layout.addWidget(self.diagnostic_section)
+        absence_settings = QWidget()
+        absence_settings_layout = QHBoxLayout(absence_settings)
+        absence_settings_layout.setContentsMargins(4, 6, 4, 6)
+        absence_settings_label = QLabel("화면 미검출 시간")
+        absence_settings_label.setProperty("detail", True)
+        absence_settings_layout.addWidget(absence_settings_label, 1)
+        absence_settings_layout.addWidget(self.absence_threshold)
+        self.absence_section = _Disclosure("자리 비움 경고 설정", absence_settings)
+        details_layout.addWidget(self.absence_section)
         self.name_panel = QWidget()
         name_layout = QVBoxLayout(self.name_panel)
         name_layout.setContentsMargins(0, 4, 0, 0)
@@ -749,11 +772,39 @@ class TrackingWindow(QWidget):
 
     def _update_list_labels(self):
         for person_id, item in self._items.items():
-            state = "화면 안" if person_id in self._visible_ids else "화면 밖"
+            visible = person_id in self._visible_ids
+            state = "화면 안" if visible else "화면 밖"
+            elapsed = None if visible else self._absence_durations.get(person_id)
+            warning = not visible and person_id in self._absence_warnings
+            if elapsed is not None:
+                minutes, seconds = divmod(int(elapsed), 60)
+                state = f'{"확인 필요" if warning else state} ({minutes:02d}:{seconds:02d})'
             label = f"{self._label(person_id)}  ·  {state}"
             if item.text() != label:
                 item.setText(label)
                 item.setToolTip(label)
+                item.setForeground(QBrush(QColor("#f4bf79")) if warning else QBrush())
+
+    def update_absences(self, timestamp, last_seen):
+        self._absence_durations = {person_id: max(0.0, timestamp - seen_at)
+                                   for person_id, seen_at in last_seen.items()
+                                   if person_id in self._items and person_id not in self._visible_ids}
+        self._refresh_absence_warnings()
+
+    def _refresh_absence_warnings(self):
+        threshold = self.absence_threshold.value()
+        self._absence_warnings = {person_id: elapsed for person_id, elapsed in self._absence_durations.items()
+                                  if elapsed >= threshold}
+        self.absence_count.setText(str(len(self._absence_warnings)))
+        self.absence_card.setToolTip(f"화면에 {threshold}초 이상 보이지 않는 등록 인원")
+        warning = bool(self._absence_warnings)
+        if self.absence_card.property("warning") != warning:
+            self.absence_card.setProperty("warning", warning)
+            for widget in (self.absence_card, self.absence_count):
+                widget.style().unpolish(widget)
+                widget.style().polish(widget)
+                widget.update()
+        self._update_list_labels()
 
     def _select_id(self, person_id):
         item = self._items.get(person_id)
@@ -846,6 +897,8 @@ class TrackingWindow(QWidget):
         self.diagnostic_source.setCurrentIndex(0)
         self._frame_times.clear()
         self.id_list.clear()
+        self._absence_durations.clear()
+        self._refresh_absence_warnings()
         self._selection_changed(None, None)
         self.visible_count.setText("0")
         self.cumulative_count.setText("0")
