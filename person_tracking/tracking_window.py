@@ -11,10 +11,10 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 from PySide6.QtCore import QEvent, QPoint, QPointF, QRectF, QSignalBlocker, QSize, Qt, Signal
-from PySide6.QtGui import QBrush, QColor, QFont, QFontDatabase, QFontMetrics, QIcon, QImage, QKeySequence, QPainter, QPainterPath, QPen, QPixmap, QShortcut
+from PySide6.QtGui import QBrush, QColor, QFont, QFontDatabase, QFontMetrics, QIcon, QImage, QKeySequence, QPainter, QPainterPath, QPalette, QPen, QPixmap, QShortcut
 from PySide6.QtWidgets import (
     QAbstractItemView, QApplication, QComboBox, QDialog, QFrame, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
-    QListWidget, QListWidgetItem, QPushButton, QScrollArea, QSizePolicy, QSpinBox, QToolButton, QStyle, QStyledItemDelegate, QStyleOptionComboBox, QStyleOptionSpinBox, QStylePainter, QTableWidget,
+    QListWidget, QListWidgetItem, QPushButton, QScrollArea, QSizePolicy, QSpinBox, QToolButton, QStyle, QStyledItemDelegate, QStyleOptionViewItem, QStyleOptionComboBox, QStyleOptionSpinBox, QStylePainter, QTableWidget,
     QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
@@ -33,7 +33,7 @@ QLabel#title { font-size: 24px; font-weight: 700; }
 QLabel[detail="true"] { color: #a2b0c4; }
 QLabel[section="true"] { font-size: 14px; font-weight: 600; }
 QFrame#sidebar { background: #111214; border: 1px solid #34363d; border-radius: 12px; }
-QFrame#visibleCountCard, QFrame#cumulativeCountCard { background: #1f2025; border-radius: 9px; }
+QFrame#visibleCountCard, QFrame#cumulativeCountCard { background: #202027; border: none; border-radius: 9px; }
 QLabel#visibleCount { color: #9696eb; }
 QLabel#cumulativeCount { color: #f5f5f7; }
 QLabel[metric="true"] { font-size: 32px; font-weight: 700; }
@@ -42,24 +42,25 @@ QLabel[metricUnit="true"], QFrame#sidebar QLabel[detail="true"] { color: #a4a7b3
 QListWidget, QWidget#identityDiagnostics {
     background: #1f2025; color: #f5f5f7; border: 1px solid #383a42; border-radius: 8px;
 }
-QListWidget { padding: 4px; outline: 0; }
+QListWidget { padding: 5px 8px 5px 5px; outline: 0; }
 QListWidget:focus { border-color: #383a42; }
-QListWidget::item { font-weight: 600; padding: 7px 8px; border: 1px solid transparent; border-radius: 5px; }
-QListWidget::item:hover:!selected { background: #292941; border-color: #494972; color: #f5f5f7; }
-QListWidget::item:selected:hover { background: #6868d6; }
-QListWidget::item:selected, QComboBox QAbstractItemView::item:selected { background: #5757cc; color: white; }
+QListWidget::item { padding: 7px 8px; border: none; border-left: 3px solid transparent; border-radius: 5px; }
+QListWidget::item:hover:!selected { background: #292935; }
+QListWidget::item:selected { background: rgba(87, 87, 204, 36); border-left: 3px solid transparent; }
+QListWidget::item:selected:hover { background: rgba(87, 87, 204, 48); }
+QComboBox QAbstractItemView::item:selected { background: #5757cc; color: white; }
 QWidget#sidebarDetails, QScrollArea#detailsScroll { background: transparent; border: none; }
 QFrame#disclosure { background: transparent; border: none; }
-QToolButton#disclosureHeader { background: transparent; color: #b9bcc8; border: none; border-radius: 6px; text-align: left; padding: 9px 6px; font-weight: 600; }
+QToolButton#disclosureHeader { background: transparent; color: #b9bcc8; border: none; border-radius: 6px; text-align: left; padding: 9px 6px 9px 24px; font-weight: 600; }
 QToolButton#disclosureHeader:hover { background: #25262e; color: #f5f5f7; }
 QToolButton#disclosureHeader:checked { color: #9696eb; background: #23233a; }
-QFrame#visibleCountCard { background: #232335; border: 1px solid #45456d; }
+
 QLabel#visibleCount { font-size: 48px; color: #9696eb; }
-QFrame#absenceCard { background: #1f2025; border: 1px solid #383a42; border-radius: 9px; }
-QLabel#absenceValue { font-size: 32px; font-weight: 700; color: #f5f5f7; }
-QFrame#absenceCard[warning="true"] { background: #33232f; border-color: #995265; }
+QFrame#absenceCard { background: #202027; border: none; border-radius: 9px; }
+QLabel#absenceValue { font-size: 32px; font-weight: 700; color: #858894; }
+QFrame#absenceCard[warning="true"] { background: #33232f; border: none; }
 QFrame#absenceCard[warning="true"] QLabel#absenceValue { color: #f294a9; }
-QLabel#absenceStatus { color: #a4a4c0; font-size: 11px; }
+
 QScrollBar:vertical { background: transparent; width: 5px; margin: 0; }
 QScrollBar::handle:vertical { background: #444650; border-radius: 2px; min-height: 24px; }
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
@@ -78,6 +79,12 @@ QSpinBox::down-button {
     width: 22px; background: transparent; border: none;
 }
 QSpinBox::up-arrow, QSpinBox::down-arrow { image: none; }
+QComboBox { padding-right: 24px; }
+QComboBox::drop-down {
+    subcontrol-origin: border; subcontrol-position: top right;
+    width: 22px; background: transparent; border: none;
+}
+QComboBox::down-arrow { image: none; }
 QComboBox QAbstractItemView { background: #1f2025; color: white; selection-background-color: #5757cc; outline: 0; }
 QLineEdit:focus, QSpinBox:focus, QPushButton:focus { border-color: #8787e1; }
 QLineEdit:disabled, QPushButton:disabled { color: #9699a4; background: #24262d; }
@@ -85,6 +92,9 @@ QTableWidget { background: #1f2025; alternate-background-color: #24262c; color: 
 QHeaderView::section { background: #2b2e36; color: #c8cad3; border: none; padding: 4px 2px; }
 QPushButton { padding: 7px 12px; border: 1px solid #383a42; border-radius: 7px; background: #2b2e36; color: #f5f5f7; }
 QPushButton:hover { background: #353842; }
+QFrame#nameInputGroup { background: #2b2e36; border: 1px solid #383a42; border-radius: 8px; }
+QLineEdit#nameEdit { background: transparent; border: none; padding: 6px 8px; }
+QPushButton#saveNameButton { padding: 0; border-radius: 5px; }
 QPushButton#saveNameButton:enabled { background: #5757cc; border-color: #5757cc; color: #ffffff; }
 QPushButton#saveNameButton:enabled:hover { background: #6868d6; border-color: #6868d6; }
 QPushButton#saveNameButton:enabled:pressed { background: #4848b5; border-color: #4848b5; }
@@ -190,16 +200,37 @@ class _ResetDialog(QDialog):
         painter.fillRect(self.rect(), QColor(0, 0, 0, 165))
 
 
+class _DisclosureButton(QToolButton):
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        pen = QPen(QColor("#9696eb" if self.isChecked() else "#a4a7b3"), 1.5)
+        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+        painter.setPen(pen)
+        center_y = self.height() / 2
+        if self.isChecked():
+            path = QPainterPath(QPointF(8, center_y - 2))
+            path.lineTo(12, center_y + 2)
+            path.lineTo(16, center_y - 2)
+        else:
+            path = QPainterPath(QPointF(10, center_y - 4))
+            path.lineTo(14, center_y)
+            path.lineTo(10, center_y + 4)
+        painter.drawPath(path)
+
+
 class _Disclosure(QFrame):
     def __init__(self, title, content):
         super().__init__()
         self.setObjectName("disclosure")
-        self.header = QToolButton()
+        self.header = _DisclosureButton()
         self.header.setObjectName("disclosureHeader")
         self.header.setText(title)
         self.header.setAccessibleName(title + " 펼치기")
         self.header.setCheckable(True)
-        self.header.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.header.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
         self.header.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.content = content
         layout = QVBoxLayout(self)
@@ -211,7 +242,7 @@ class _Disclosure(QFrame):
         self._toggle(False)
 
     def _toggle(self, expanded):
-        self.header.setArrowType(Qt.ArrowType.DownArrow if expanded else Qt.ArrowType.RightArrow)
+        self.header.update()
         self.header.setAccessibleName(self.header.text() + (" 접기" if expanded else " 펼치기"))
         self.content.setVisible(expanded)
 
@@ -221,6 +252,76 @@ class _NoFocusItemDelegate(QStyledItemDelegate):
         super().initStyleOption(option, index)
         # The selected background indicates the current item.
         option.state &= ~QStyle.StateFlag.State_HasFocus
+
+
+class _MetricLabel(QLabel):
+    """Draw the number and its smaller unit on one shared text baseline."""
+
+    def sizeHint(self):
+        size = super().sizeHint()
+        return QSize(size.width() + 24, size.height())
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
+        font = self.font()
+        metrics = QFontMetrics(font)
+        baseline = (self.height() - metrics.height()) / 2 + metrics.ascent()
+        painter.setFont(font)
+        painter.setPen(self.palette().color(QPalette.ColorRole.WindowText))
+        painter.drawText(QPointF(0, baseline), self.text())
+        unit_font = QFont(font)
+        unit_font.setPixelSize(14)
+        unit_font.setWeight(QFont.Weight.Normal)
+        painter.setFont(unit_font)
+        painter.setPen(QColor("#a4a7b3"))
+        painter.drawText(QPointF(metrics.horizontalAdvance(self.text()) + 5, baseline), "명")
+
+
+class _IdentityItemDelegate(_NoFocusItemDelegate):
+    def sizeHint(self, option, index):
+        size = super().sizeHint(option, index)
+        return QSize(size.width(), max(42, size.height()))
+
+    def paint(self, painter, option, index):
+        styled = QStyleOptionViewItem(option)
+        self.initStyleOption(styled, index)
+        name, _, status = styled.text.partition("  ·  ")
+        styled.text = ""
+        style = styled.widget.style() if styled.widget else QApplication.style()
+        style.drawControl(QStyle.ControlElement.CE_ItemViewItem, styled, painter, styled.widget)
+        painter.save()
+        painter.setClipRect(option.rect)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        status_font = QFont(option.font)
+        status_font.setPixelSize(11)
+        status_font.setWeight(QFont.Weight.Normal)
+        status_metrics = QFontMetrics(status_font)
+        right = option.rect.right() - 10
+        status_width = status_metrics.horizontalAdvance(status)
+        status_left = right - status_width
+        painter.setFont(status_font)
+        painter.setPen(QColor("#a4a7b3"))
+        baseline = option.rect.center().y() + (status_metrics.ascent() - status_metrics.descent()) / 2
+        painter.drawText(QPointF(status_left, baseline), status)
+        dot_color = "#7ab89e" if status == "화면 안" else "#757986"
+        if status.startswith("확인 필요"):
+            dot_color = "#f294a9"
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QColor(dot_color))
+        painter.drawEllipse(QPointF(status_left - 8, option.rect.center().y()), 2.5, 2.5)
+        name_font = QFont(option.font)
+        name_font.setPixelSize(13)
+        name_font.setWeight(QFont.Weight.DemiBold)
+        painter.setFont(name_font)
+        selected = bool(option.state & QStyle.StateFlag.State_Selected)
+        painter.setPen(QColor("#aaaaf2" if selected else "#e6e7ef"))
+        name_metrics = QFontMetrics(name_font)
+        left = option.rect.left() + 12
+        text = name_metrics.elidedText(name, Qt.TextElideMode.ElideRight, max(0, status_left - left - 20))
+        baseline = option.rect.center().y() + (name_metrics.ascent() - name_metrics.descent()) / 2
+        painter.drawText(QPointF(left, baseline), text)
+        painter.restore()
 
 
 class _ThresholdSpinBox(QSpinBox):
@@ -252,6 +353,17 @@ class _ComparisonComboBox(QComboBox):
         painter = QStylePainter(self)
         painter.drawComplexControl(QStyle.ComplexControl.CC_ComboBox, option)
         painter.drawControl(QStyle.ControlElement.CE_ComboBoxLabel, option)
+        arrow = self.style().subControlRect(QStyle.ComplexControl.CC_ComboBox, option,
+                                           QStyle.SubControl.SC_ComboBoxArrow, self)
+        center = arrow.center()
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QColor("#b9bcc8" if self.isEnabled() else "#626574"))
+        path = QPainterPath(QPointF(center.x() - 4, center.y() - 2))
+        path.lineTo(center.x() + 4, center.y() - 2)
+        path.lineTo(center.x(), center.y() + 2)
+        path.closeSubpath()
+        painter.drawPath(path)
 
 
 class _VideoView(QWidget):
@@ -416,7 +528,7 @@ class TrackingWindow(QWidget):
         panel.setObjectName("sidebar")
         panel.setFixedWidth(320)
         layout = QVBoxLayout(panel)
-        layout.setContentsMargins(13, 13, 13, 13)
+        layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(10)
 
         visible_card, self.visible_count = self._count_card("현재 인원", "visibleCount")
@@ -434,16 +546,10 @@ class TrackingWindow(QWidget):
         absence_title = QLabel("자리 비움 경고")
         absence_title.setProperty("metricCaption", True)
         absence_layout.addWidget(absence_title)
-        absence_row = QHBoxLayout()
-        self.absence_count = absence_value = QLabel("0")
-        absence_value.setObjectName("absenceValue")
-        absence_value.setAccessibleName("자리 비움 경고 인원")
-        absence_row.addWidget(absence_value)
-        absence_status = QLabel("명")
-        absence_status.setObjectName("absenceStatus")
-        absence_row.addWidget(absence_status)
-        absence_row.addStretch()
-        absence_layout.addLayout(absence_row)
+        self.absence_count = _MetricLabel("0")
+        self.absence_count.setObjectName("absenceValue")
+        self.absence_count.setAccessibleName("자리 비움 경고 인원")
+        absence_layout.addWidget(self.absence_count)
         cards.addWidget(absence_card, 1)
         layout.addLayout(cards)
 
@@ -458,7 +564,7 @@ class TrackingWindow(QWidget):
 
         self.id_list = QListWidget()
         self.id_list.setObjectName("identityList")
-        self.id_list.setItemDelegate(_NoFocusItemDelegate(self.id_list))
+        self.id_list.setItemDelegate(_IdentityItemDelegate(self.id_list))
         self.id_list.setMouseTracking(True)
         self.id_list.setAccessibleName("등록된 사람 ID 목록")
         self.id_list.setUniformItemSizes(True)
@@ -505,14 +611,22 @@ class TrackingWindow(QWidget):
         self.name_edit.setPlaceholderText("표시할 이름 입력")
         self.name_edit.setMaxLength(36)
         self.name_edit.returnPressed.connect(self._save_name)
-        self.save_button = QPushButton("이름 저장")
+        self.save_button = QPushButton("저장")
         self.save_button.setObjectName("saveNameButton")
         self.save_button.setAccessibleName("표시 이름 저장")
         self.save_button.clicked.connect(self._save_name)
-        editor = QHBoxLayout()
+        input_group = QFrame()
+        input_group.setObjectName("nameInputGroup")
+        input_group.setFixedHeight(42)
+        editor = QHBoxLayout(input_group)
+        editor.setContentsMargins(0, 4, 4, 4)
+        editor.setSpacing(0)
+        self.name_edit.setMinimumWidth(0)
+        self.name_edit.setFixedHeight(32)
+        self.save_button.setFixedSize(50, 32)
         editor.addWidget(self.name_edit, 1)
         editor.addWidget(self.save_button)
-        name_layout.addLayout(editor)
+        name_layout.addWidget(input_group)
         people_layout.addWidget(self.name_panel)
         details_layout.addStretch()
         scroll = QScrollArea()
@@ -605,7 +719,7 @@ class TrackingWindow(QWidget):
         card.setObjectName(f"{object_name}Card")
         label = QLabel(title)
         label.setProperty("metricCaption", True)
-        value = QLabel("0")
+        value = _MetricLabel("0")
         value.setObjectName(object_name)
         value.setAccessibleName("현재 화면 인원 수" if title == "현재 인원" else title)
         value.setProperty("metric", True)
@@ -613,14 +727,7 @@ class TrackingWindow(QWidget):
         layout.setContentsMargins(11, 8, 11, 8)
         layout.setSpacing(1)
         layout.addWidget(label)
-        count_row = QHBoxLayout()
-        count_row.setSpacing(4)
-        count_row.addWidget(value, 0, Qt.AlignmentFlag.AlignBaseline)
-        unit = QLabel("명")
-        unit.setProperty("metricUnit", True)
-        count_row.addWidget(unit, 0, Qt.AlignmentFlag.AlignBaseline)
-        count_row.addStretch()
-        layout.addLayout(count_row)
+        layout.addWidget(value)
         return card, value
 
     def eventFilter(self, watched, event):
