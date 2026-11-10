@@ -14,7 +14,7 @@ from PySide6.QtCore import QEvent, QPoint, QPointF, QRectF, QSignalBlocker, QSiz
 from PySide6.QtGui import QBrush, QColor, QFont, QFontDatabase, QFontMetrics, QIcon, QImage, QKeySequence, QPainter, QPainterPath, QPen, QPixmap, QShortcut
 from PySide6.QtWidgets import (
     QAbstractItemView, QApplication, QComboBox, QDialog, QFrame, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
-    QListWidget, QListWidgetItem, QPushButton, QScrollArea, QSizePolicy, QSpinBox, QToolButton, QStyle, QStyledItemDelegate, QStyleOptionComboBox, QStylePainter, QTableWidget,
+    QListWidget, QListWidgetItem, QPushButton, QScrollArea, QSizePolicy, QSpinBox, QToolButton, QStyle, QStyledItemDelegate, QStyleOptionComboBox, QStyleOptionSpinBox, QStylePainter, QTableWidget,
     QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
@@ -34,7 +34,7 @@ QLabel[detail="true"] { color: #a2b0c4; }
 QLabel[section="true"] { font-size: 14px; font-weight: 600; }
 QFrame#sidebar { background: #111214; border: 1px solid #34363d; border-radius: 12px; }
 QFrame#visibleCountCard, QFrame#cumulativeCountCard { background: #1f2025; border-radius: 9px; }
-QLabel#visibleCount { color: #b6b5ff; }
+QLabel#visibleCount { color: #9696eb; }
 QLabel#cumulativeCount { color: #f5f5f7; }
 QLabel[metric="true"] { font-size: 32px; font-weight: 700; }
 QLabel[metricCaption="true"] { color: #d4d5db; font-size: 13px; font-weight: 600; }
@@ -45,42 +45,52 @@ QListWidget, QWidget#identityDiagnostics {
 QListWidget { padding: 4px; outline: 0; }
 QListWidget:focus { border-color: #383a42; }
 QListWidget::item { font-weight: 600; padding: 7px 8px; border: 1px solid transparent; border-radius: 5px; }
-QListWidget::item:hover:!selected { background: #302e43; border-color: #514b70; color: #f5f5f7; }
-QListWidget::item:selected:hover { background: #554b6c; }
-QListWidget::item:selected, QComboBox QAbstractItemView::item:selected { background: #453d59; color: white; }
+QListWidget::item:hover:!selected { background: #292941; border-color: #494972; color: #f5f5f7; }
+QListWidget::item:selected:hover { background: #6868d6; }
+QListWidget::item:selected, QComboBox QAbstractItemView::item:selected { background: #5757cc; color: white; }
 QWidget#sidebarDetails, QScrollArea#detailsScroll { background: transparent; border: none; }
 QFrame#disclosure { background: transparent; border: none; }
 QToolButton#disclosureHeader { background: transparent; color: #b9bcc8; border: none; border-radius: 6px; text-align: left; padding: 9px 6px; font-weight: 600; }
 QToolButton#disclosureHeader:hover { background: #25262e; color: #f5f5f7; }
-QToolButton#disclosureHeader:checked { color: #d0c8ff; background: #23222c; }
-QFrame#visibleCountCard { background: #252331; border: 1px solid #46405d; }
-QLabel#visibleCount { font-size: 48px; color: #d0c8ff; }
+QToolButton#disclosureHeader:checked { color: #9696eb; background: #23233a; }
+QFrame#visibleCountCard { background: #232335; border: 1px solid #45456d; }
+QLabel#visibleCount { font-size: 48px; color: #9696eb; }
 QFrame#absenceCard { background: #1f2025; border: 1px solid #383a42; border-radius: 9px; }
 QLabel#absenceValue { font-size: 32px; font-weight: 700; color: #f5f5f7; }
-QFrame#absenceCard[warning="true"] { background: #342a25; border-color: #8a6647; }
-QFrame#absenceCard[warning="true"] QLabel#absenceValue { color: #f4bf79; }
-QLabel#absenceStatus { color: #aba3c4; font-size: 11px; }
+QFrame#absenceCard[warning="true"] { background: #33232f; border-color: #995265; }
+QFrame#absenceCard[warning="true"] QLabel#absenceValue { color: #f294a9; }
+QLabel#absenceStatus { color: #a4a4c0; font-size: 11px; }
 QScrollBar:vertical { background: transparent; width: 5px; margin: 0; }
 QScrollBar::handle:vertical { background: #444650; border-radius: 2px; min-height: 24px; }
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
 QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }
 QLineEdit, QComboBox, QSpinBox {
     background: #2b2e36; color: #f5f5f7; border: 1px solid #383a42;
-    border-radius: 7px; padding: 6px 8px; selection-background-color: #453d59;
+    border-radius: 7px; padding: 6px 8px; selection-background-color: #5757cc;
 }
-QComboBox QAbstractItemView { background: #1f2025; color: white; selection-background-color: #453d59; outline: 0; }
-QLineEdit:focus, QSpinBox:focus, QPushButton:focus { border-color: #aaa8ff; }
+QSpinBox { padding-right: 24px; }
+QSpinBox::up-button {
+    subcontrol-origin: border; subcontrol-position: top right;
+    width: 22px; background: transparent; border: none;
+}
+QSpinBox::down-button {
+    subcontrol-origin: border; subcontrol-position: bottom right;
+    width: 22px; background: transparent; border: none;
+}
+QSpinBox::up-arrow, QSpinBox::down-arrow { image: none; }
+QComboBox QAbstractItemView { background: #1f2025; color: white; selection-background-color: #5757cc; outline: 0; }
+QLineEdit:focus, QSpinBox:focus, QPushButton:focus { border-color: #8787e1; }
 QLineEdit:disabled, QPushButton:disabled { color: #9699a4; background: #24262d; }
 QTableWidget { background: #1f2025; alternate-background-color: #24262c; color: #f5f5f7; border: none; }
 QHeaderView::section { background: #2b2e36; color: #c8cad3; border: none; padding: 4px 2px; }
 QPushButton { padding: 7px 12px; border: 1px solid #383a42; border-radius: 7px; background: #2b2e36; color: #f5f5f7; }
 QPushButton:hover { background: #353842; }
-QPushButton#saveNameButton:enabled { background: #b8a8e8; border-color: #b8a8e8; color: #211b30; }
-QPushButton#saveNameButton:enabled:hover { background: #cbbdf4; border-color: #cbbdf4; }
-QPushButton#saveNameButton:enabled:pressed { background: #a291d5; border-color: #a291d5; }
+QPushButton#saveNameButton:enabled { background: #5757cc; border-color: #5757cc; color: #ffffff; }
+QPushButton#saveNameButton:enabled:hover { background: #6868d6; border-color: #6868d6; }
+QPushButton#saveNameButton:enabled:pressed { background: #4848b5; border-color: #4848b5; }
 QPushButton#resetButton { background: transparent; border-color: transparent; border-radius: 8px; padding: 0; }
-QPushButton#resetButton:hover { border-color: #45414f; background: #292630; }
-QPushButton#resetButton:pressed { background: #35303e; }
+QPushButton#resetButton:hover { border-color: #45456d; background: #292941; }
+QPushButton#resetButton:pressed { background: #333351; }
 """
 
 
@@ -95,7 +105,7 @@ class _DiagnosticRecord:
 def _reset_icon():
     icon = QIcon()
     for mode, color in ((QIcon.Mode.Normal, "#b5b7c3"),
-                        (QIcon.Mode.Active, "#d0c8ff"),
+                        (QIcon.Mode.Active, "#9696eb"),
                         (QIcon.Mode.Disabled, "#666872")):
         pixmap = QPixmap(48, 48)
         pixmap.setDevicePixelRatio(2)
@@ -133,9 +143,9 @@ class _ResetDialog(QDialog):
             QPushButton { background: #2b2e36; color: #f5f5f7; border: none; border-radius: 7px; padding: 9px 18px; }
             QPushButton:hover { background: #383b46; }
             QPushButton:focus { border: none; }
-            QPushButton#confirmReset { background: #b8a8e8; color: #211b30; }
-            QPushButton#confirmReset:hover { background: #cbbdf4; }
-            QPushButton#confirmReset:pressed { background: #a291d5; }
+            QPushButton#confirmReset { background: #5757cc; color: #ffffff; }
+            QPushButton#confirmReset:hover { background: #6868d6; }
+            QPushButton#confirmReset:pressed { background: #4848b5; }
         """)
         card = QFrame()
         card.setObjectName("resetCard")
@@ -211,6 +221,27 @@ class _NoFocusItemDelegate(QStyledItemDelegate):
         super().initStyleOption(option, index)
         # The selected background indicates the current item.
         option.state &= ~QStyle.StateFlag.State_HasFocus
+
+
+class _ThresholdSpinBox(QSpinBox):
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        option = QStyleOptionSpinBox()
+        self.initStyleOption(option)
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(Qt.PenStyle.NoPen)
+        controls = ((QStyle.SubControl.SC_SpinBoxUp, -1, self.value() < self.maximum()),
+                    (QStyle.SubControl.SC_SpinBoxDown, 1, self.value() > self.minimum()))
+        for control, direction, enabled in controls:
+            rect = self.style().subControlRect(QStyle.ComplexControl.CC_SpinBox, option, control, self)
+            center = rect.center()
+            path = QPainterPath(QPointF(center.x() - 4, center.y() - direction * 2))
+            path.lineTo(center.x() + 4, center.y() - direction * 2)
+            path.lineTo(center.x(), center.y() + direction * 2)
+            path.closeSubpath()
+            painter.setBrush(QColor("#b9bcc8" if enabled and self.isEnabled() else "#626574"))
+            painter.drawPath(path)
 
 
 class _ComparisonComboBox(QComboBox):
@@ -416,7 +447,7 @@ class TrackingWindow(QWidget):
         cards.addWidget(absence_card, 1)
         layout.addLayout(cards)
 
-        self.absence_threshold = QSpinBox()
+        self.absence_threshold = _ThresholdSpinBox()
         self.absence_threshold.setRange(1, 600)
         self.absence_threshold.setValue(60)
         self.absence_threshold.setSuffix("초")
@@ -759,7 +790,7 @@ class TrackingWindow(QWidget):
                 if face_candidate is not None and face_snapshot is not snapshot:
                     details.append("얼굴 점수는 직전 얼굴 표본의 값입니다.")
                 tooltip = "<qt>" + "<br>".join(escape(detail) for detail in details) + "</qt>"
-            background = QBrush(QColor("#393653")) if matched else QBrush()
+            background = QBrush(QColor("#30304e")) if matched else QBrush()
             for column, value in enumerate(values):
                 item = table.item(row, column)
                 item.setText(value)
@@ -783,7 +814,7 @@ class TrackingWindow(QWidget):
             if item.text() != label:
                 item.setText(label)
                 item.setToolTip(label)
-                item.setForeground(QBrush(QColor("#f4bf79")) if warning else QBrush())
+                item.setForeground(QBrush(QColor("#f294a9")) if warning else QBrush())
 
     def update_absences(self, timestamp, last_seen):
         self._absence_durations = {person_id: max(0.0, timestamp - seen_at)
