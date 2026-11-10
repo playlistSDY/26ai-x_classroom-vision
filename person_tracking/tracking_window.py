@@ -31,34 +31,39 @@ QLabel { color: #e6edf7; }
 QLabel#title { font-size: 24px; font-weight: 700; }
 QLabel[detail="true"] { color: #a2b0c4; }
 QLabel[section="true"] { font-size: 14px; font-weight: 600; }
-QLabel[metric="true"] { font-size: 30px; font-weight: 700; color: #83e5d0; }
-QMessageBox { background: #192331; }
-QFrame#sidebar, QFrame[card="true"] {
-    background: #192331; border: 1px solid #2b3b50; border-radius: 12px;
+QFrame#sidebar { background: #111214; border: 1px solid #34363d; border-radius: 12px; }
+QFrame#visibleCountCard, QFrame#cumulativeCountCard { background: #1f2025; border-radius: 9px; }
+QLabel#visibleCount { color: #b6b5ff; }
+QLabel#cumulativeCount { color: #f5f5f7; }
+QLabel[metric="true"] { font-size: 32px; font-weight: 700; }
+QLabel[metricCaption="true"] { color: #d4d5db; font-size: 13px; font-weight: 600; }
+QLabel[metricUnit="true"], QFrame#sidebar QLabel[detail="true"] { color: #a4a7b3; }
+QMessageBox { background: #1f2025; }
+QListWidget, QWidget#identityDiagnostics {
+    background: #1f2025; color: #f5f5f7; border: 1px solid #383a42; border-radius: 8px;
 }
-QListWidget, QLineEdit {
-    background: #111925; color: #e6edf7; border: 1px solid #344760;
-    border-radius: 7px; padding: 5px;
+QListWidget { padding: 4px; }
+QListWidget::item { padding: 7px 8px; border-radius: 5px; }
+QListWidget::item:selected, QComboBox QAbstractItemView::item:selected { background: #5757cc; color: white; }
+QTabWidget::pane { border: none; padding-top: 8px; }
+QTabBar::tab { background: #24262d; color: #aaadb8; padding: 7px 13px; border: 1px solid transparent; border-radius: 7px; margin-right: 4px; }
+QTabBar::tab:selected { background: #393653; color: #f5f5f7; border-color: #666196; }
+QTabBar::tab:hover:!selected { background: #2b2e36; color: #e4e4ed; }
+QLineEdit, QComboBox {
+    background: #2b2e36; color: #f5f5f7; border: 1px solid #383a42;
+    border-radius: 7px; padding: 6px 8px; selection-background-color: #5757cc;
 }
-QListWidget::item { padding: 7px 5px; border-radius: 5px; }
-QListWidget::item:selected { background: #2d4b61; color: #ffffff; }
-QTabWidget::pane { border: none; }
-QTabBar::tab { background: #25374c; color: #bdcbe0; padding: 7px 10px; }
-QTabBar::tab:selected { background: #344b64; color: #ffffff; }
-QWidget#identityDiagnostics { background: #111925; border: 1px solid #344760; border-radius: 7px; }
-QComboBox { background: #25374c; color: #e6edf7; border: 1px solid #415873; border-radius: 5px; padding: 4px 6px; }
-QTableWidget { background: #111925; alternate-background-color: #182333; color: #e6edf7; border: none; }
-QHeaderView::section { background: #223247; color: #c7d5e6; border: none; padding: 4px 2px; }
-QLineEdit:focus { border-color: #78dfc9; }
-QLineEdit:disabled { color: #8494a9; }
-QPushButton {
-    padding: 8px 13px; border: 1px solid #415873; border-radius: 7px;
-    background: #25374c; color: #f0f5fc;
-}
-QPushButton:hover { background: #344b64; }
-QPushButton:disabled { color: #8494a9; background: #1b2939; }
-QPushButton#resetButton { color: #ffb4a9; border-color: #74464a; background: #38292e; }
-QPushButton#resetButton:hover { background: #503238; }
+QComboBox QAbstractItemView { background: #1f2025; color: white; selection-background-color: #5757cc; }
+QLineEdit:focus, QComboBox:focus, QPushButton:focus { border-color: #aaa8ff; }
+QLineEdit:disabled, QPushButton:disabled { color: #9699a4; background: #24262d; }
+QTableWidget { background: #1f2025; alternate-background-color: #24262c; color: #f5f5f7; border: none; }
+QHeaderView::section { background: #2b2e36; color: #c8cad3; border: none; padding: 4px 2px; }
+QPushButton { padding: 7px 12px; border: 1px solid #383a42; border-radius: 7px; background: #2b2e36; color: #f5f5f7; }
+QPushButton:hover { background: #353842; }
+QPushButton#saveNameButton:enabled { background: #5858ce; border-color: #6868da; color: white; }
+QPushButton#saveNameButton:enabled:hover { background: #6464dc; }
+QPushButton#resetButton { color: #c2c4ce; background: #1f2025; }
+QPushButton#resetButton:hover { color: #ff9397; border-color: #a65760; background: #302227; }
 """
 
 
@@ -215,18 +220,19 @@ class TrackingWindow(QWidget):
     def _sidebar(self):
         panel = QFrame()
         panel.setObjectName("sidebar")
-        panel.setFixedWidth(304)
+        panel.setFixedWidth(320)
         layout = QVBoxLayout(panel)
         layout.setContentsMargins(13, 13, 13, 13)
         layout.setSpacing(10)
 
         cards = QHBoxLayout()
+        cards.setSpacing(8)
         visible_card, self.visible_count = self._count_card("현재 인원", "visibleCount")
         cumulative_card, self.cumulative_count = self._count_card("누적 인원", "cumulativeCount")
         cards.addWidget(visible_card, 1)
         cards.addWidget(cumulative_card, 1)
         layout.addLayout(cards)
-        note = QLabel("현재 화면 인원에 확인 중인 사람도 포함됩니다.")
+        note = QLabel("현재 인원에는 번호 확인 중인 사람도 포함됩니다.")
         note.setWordWrap(True)
         note.setProperty("detail", True)
         layout.addWidget(note)
@@ -339,9 +345,9 @@ class TrackingWindow(QWidget):
     @staticmethod
     def _count_card(title, object_name):
         card = QFrame()
-        card.setProperty("card", True)
+        card.setObjectName(f"{object_name}Card")
         label = QLabel(title)
-        label.setProperty("detail", True)
+        label.setProperty("metricCaption", True)
         value = QLabel("0")
         value.setObjectName(object_name)
         value.setAccessibleName("현재 화면 인원 수" if title == "현재 인원" else title)
@@ -350,7 +356,14 @@ class TrackingWindow(QWidget):
         layout.setContentsMargins(11, 8, 11, 8)
         layout.setSpacing(1)
         layout.addWidget(label)
-        layout.addWidget(value)
+        count_row = QHBoxLayout()
+        count_row.setSpacing(4)
+        count_row.addWidget(value, 0, Qt.AlignmentFlag.AlignBaseline)
+        unit = QLabel("명")
+        unit.setProperty("metricUnit", True)
+        count_row.addWidget(unit, 0, Qt.AlignmentFlag.AlignBaseline)
+        count_row.addStretch()
+        layout.addLayout(count_row)
         return card, value
 
     def eventFilter(self, watched, event):
@@ -520,7 +533,7 @@ class TrackingWindow(QWidget):
                 if face_candidate is not None and face_snapshot is not snapshot:
                     details.append("얼굴 점수는 직전 얼굴 표본의 값입니다.")
                 tooltip = "<qt>" + "<br>".join(escape(detail) for detail in details) + "</qt>"
-            background = QBrush(QColor("#19413f")) if matched else QBrush()
+            background = QBrush(QColor("#393653")) if matched else QBrush()
             for column, value in enumerate(values):
                 item = table.item(row, column)
                 item.setText(value)
