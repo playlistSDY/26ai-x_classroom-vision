@@ -5,16 +5,17 @@ from __future__ import annotations
 from collections import deque
 from dataclasses import dataclass
 from html import escape
+from pathlib import Path
 import time
 from typing import TYPE_CHECKING
 
 import numpy as np
-from PySide6.QtCore import QEvent, QPointF, QRectF, QSignalBlocker, Qt, Signal
-from PySide6.QtGui import QBrush, QColor, QFont, QFontMetrics, QImage, QKeySequence, QPainter, QPen, QShortcut
+from PySide6.QtCore import QEvent, QPoint, QPointF, QRectF, QSignalBlocker, QSize, Qt, Signal
+from PySide6.QtGui import QBrush, QColor, QFont, QFontDatabase, QFontMetrics, QIcon, QImage, QKeySequence, QPainter, QPainterPath, QPen, QPixmap, QShortcut
 from PySide6.QtWidgets import (
-    QAbstractItemView, QComboBox, QFrame, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
-    QListWidget, QListWidgetItem, QMessageBox, QPushButton, QTableWidget,
-    QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget,
+    QAbstractItemView, QApplication, QComboBox, QDialog, QFrame, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
+    QListWidget, QListWidgetItem, QPushButton, QScrollArea, QSizePolicy, QSpinBox, QToolButton, QStyle, QStyledItemDelegate, QStyleOptionComboBox, QStyleOptionSpinBox, QStylePainter, QTableWidget,
+    QTableWidgetItem, QVBoxLayout, QWidget,
 )
 
 if TYPE_CHECKING:
@@ -33,37 +34,63 @@ QLabel[detail="true"] { color: #a2b0c4; }
 QLabel[section="true"] { font-size: 14px; font-weight: 600; }
 QFrame#sidebar { background: #111214; border: 1px solid #34363d; border-radius: 12px; }
 QFrame#visibleCountCard, QFrame#cumulativeCountCard { background: #1f2025; border-radius: 9px; }
-QLabel#visibleCount { color: #b6b5ff; }
+QLabel#visibleCount { color: #9696eb; }
 QLabel#cumulativeCount { color: #f5f5f7; }
 QLabel[metric="true"] { font-size: 32px; font-weight: 700; }
 QLabel[metricCaption="true"] { color: #d4d5db; font-size: 13px; font-weight: 600; }
 QLabel[metricUnit="true"], QFrame#sidebar QLabel[detail="true"] { color: #a4a7b3; }
-QMessageBox { background: #1f2025; }
 QListWidget, QWidget#identityDiagnostics {
     background: #1f2025; color: #f5f5f7; border: 1px solid #383a42; border-radius: 8px;
 }
-QListWidget { padding: 4px; }
-QListWidget::item { padding: 7px 8px; border-radius: 5px; }
+QListWidget { padding: 4px; outline: 0; }
+QListWidget:focus { border-color: #383a42; }
+QListWidget::item { font-weight: 600; padding: 7px 8px; border: 1px solid transparent; border-radius: 5px; }
+QListWidget::item:hover:!selected { background: #292941; border-color: #494972; color: #f5f5f7; }
+QListWidget::item:selected:hover { background: #6868d6; }
 QListWidget::item:selected, QComboBox QAbstractItemView::item:selected { background: #5757cc; color: white; }
-QTabWidget::pane { border: none; padding-top: 8px; }
-QTabBar::tab { background: #24262d; color: #aaadb8; padding: 7px 13px; border: 1px solid transparent; border-radius: 7px; margin-right: 4px; }
-QTabBar::tab:selected { background: #393653; color: #f5f5f7; border-color: #666196; }
-QTabBar::tab:hover:!selected { background: #2b2e36; color: #e4e4ed; }
-QLineEdit, QComboBox {
+QWidget#sidebarDetails, QScrollArea#detailsScroll { background: transparent; border: none; }
+QFrame#disclosure { background: transparent; border: none; }
+QToolButton#disclosureHeader { background: transparent; color: #b9bcc8; border: none; border-radius: 6px; text-align: left; padding: 9px 6px; font-weight: 600; }
+QToolButton#disclosureHeader:hover { background: #25262e; color: #f5f5f7; }
+QToolButton#disclosureHeader:checked { color: #9696eb; background: #23233a; }
+QFrame#visibleCountCard { background: #232335; border: 1px solid #45456d; }
+QLabel#visibleCount { font-size: 48px; color: #9696eb; }
+QFrame#absenceCard { background: #1f2025; border: 1px solid #383a42; border-radius: 9px; }
+QLabel#absenceValue { font-size: 32px; font-weight: 700; color: #f5f5f7; }
+QFrame#absenceCard[warning="true"] { background: #33232f; border-color: #995265; }
+QFrame#absenceCard[warning="true"] QLabel#absenceValue { color: #f294a9; }
+QLabel#absenceStatus { color: #a4a4c0; font-size: 11px; }
+QScrollBar:vertical { background: transparent; width: 5px; margin: 0; }
+QScrollBar::handle:vertical { background: #444650; border-radius: 2px; min-height: 24px; }
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }
+QLineEdit, QComboBox, QSpinBox {
     background: #2b2e36; color: #f5f5f7; border: 1px solid #383a42;
     border-radius: 7px; padding: 6px 8px; selection-background-color: #5757cc;
 }
-QComboBox QAbstractItemView { background: #1f2025; color: white; selection-background-color: #5757cc; }
-QLineEdit:focus, QComboBox:focus, QPushButton:focus { border-color: #aaa8ff; }
+QSpinBox { padding-right: 24px; }
+QSpinBox::up-button {
+    subcontrol-origin: border; subcontrol-position: top right;
+    width: 22px; background: transparent; border: none;
+}
+QSpinBox::down-button {
+    subcontrol-origin: border; subcontrol-position: bottom right;
+    width: 22px; background: transparent; border: none;
+}
+QSpinBox::up-arrow, QSpinBox::down-arrow { image: none; }
+QComboBox QAbstractItemView { background: #1f2025; color: white; selection-background-color: #5757cc; outline: 0; }
+QLineEdit:focus, QSpinBox:focus, QPushButton:focus { border-color: #8787e1; }
 QLineEdit:disabled, QPushButton:disabled { color: #9699a4; background: #24262d; }
 QTableWidget { background: #1f2025; alternate-background-color: #24262c; color: #f5f5f7; border: none; }
 QHeaderView::section { background: #2b2e36; color: #c8cad3; border: none; padding: 4px 2px; }
 QPushButton { padding: 7px 12px; border: 1px solid #383a42; border-radius: 7px; background: #2b2e36; color: #f5f5f7; }
 QPushButton:hover { background: #353842; }
-QPushButton#saveNameButton:enabled { background: #5858ce; border-color: #6868da; color: white; }
-QPushButton#saveNameButton:enabled:hover { background: #6464dc; }
-QPushButton#resetButton { color: #c2c4ce; background: #1f2025; }
-QPushButton#resetButton:hover { color: #ff9397; border-color: #a65760; background: #302227; }
+QPushButton#saveNameButton:enabled { background: #5757cc; border-color: #5757cc; color: #ffffff; }
+QPushButton#saveNameButton:enabled:hover { background: #6868d6; border-color: #6868d6; }
+QPushButton#saveNameButton:enabled:pressed { background: #4848b5; border-color: #4848b5; }
+QPushButton#resetButton { background: transparent; border-color: transparent; border-radius: 8px; padding: 0; }
+QPushButton#resetButton:hover { border-color: #45456d; background: #292941; }
+QPushButton#resetButton:pressed { background: #333351; }
 """
 
 
@@ -73,6 +100,158 @@ class _DiagnosticRecord:
     comparison: Assignment | None = None
     decision: Assignment | None = None
     face_comparison: Assignment | None = None
+
+
+def _reset_icon():
+    icon = QIcon()
+    for mode, color in ((QIcon.Mode.Normal, "#b5b7c3"),
+                        (QIcon.Mode.Active, "#9696eb"),
+                        (QIcon.Mode.Disabled, "#666872")):
+        pixmap = QPixmap(48, 48)
+        pixmap.setDevicePixelRatio(2)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        pen = QPen(QColor(color), 1.8)
+        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+        painter.setPen(pen)
+        path = QPainterPath(QPointF(19, 9))
+        path.cubicTo(17, 3, 8, 3, 5, 9)
+        path.cubicTo(2, 15, 8, 21, 14, 19)
+        path.cubicTo(17, 18, 19, 16, 19, 14)
+        painter.drawPath(path)
+        painter.drawLine(QPointF(14, 9), QPointF(19, 9))
+        painter.drawLine(QPointF(19, 9), QPointF(19, 4))
+        painter.end()
+        icon.addPixmap(pixmap, mode)
+    return icon
+
+
+class _ResetDialog(QDialog):
+    def __init__(self, parent):
+        super().__init__(parent, Qt.WindowType.Dialog | Qt.WindowType.FramelessWindowHint)
+        self.setWindowTitle("추적 기록 초기화")
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setGeometry(parent.mapToGlobal(QPoint(0, 0)).x(),
+                         parent.mapToGlobal(QPoint(0, 0)).y(), parent.width(), parent.height())
+        self.setStyleSheet("""
+            QFrame#resetCard { background: #1f2025; border: 1px solid #383a42; border-radius: 12px; }
+            QLabel#resetTitle { color: #f5f5f7; font-size: 21px; font-weight: 700; }
+            QLabel#resetDescription { color: #a4a7b3; font-size: 14px; }
+            QFrame#resetDivider { background: #34363d; border: none; }
+            QPushButton { background: #2b2e36; color: #f5f5f7; border: none; border-radius: 7px; padding: 9px 18px; }
+            QPushButton:hover { background: #383b46; }
+            QPushButton:focus { border: none; }
+            QPushButton#confirmReset { background: #5757cc; color: #ffffff; }
+            QPushButton#confirmReset:hover { background: #6868d6; }
+            QPushButton#confirmReset:pressed { background: #4848b5; }
+        """)
+        card = QFrame()
+        card.setObjectName("resetCard")
+        card.setFixedWidth(min(440, parent.width() - 48))
+        content = QVBoxLayout(card)
+        content.setContentsMargins(24, 24, 24, 20)
+        content.setSpacing(12)
+        title = QLabel("추적 기록 초기화")
+        title.setObjectName("resetTitle")
+        content.addWidget(title)
+        description = QLabel("등록된 번호, 표시 이름, 누적 인원을 초기화할까요?")
+        description.setObjectName("resetDescription")
+        description.setWordWrap(True)
+        content.addWidget(description)
+        content.addSpacing(12)
+        divider = QFrame()
+        divider.setObjectName("resetDivider")
+        divider.setFixedHeight(1)
+        content.addWidget(divider)
+        content.addSpacing(4)
+        actions = QHBoxLayout()
+        actions.setSpacing(8)
+        actions.addStretch()
+        cancel = QPushButton("취소")
+        cancel.setDefault(True)
+        cancel.clicked.connect(self.reject)
+        confirm = QPushButton("초기화")
+        confirm.setObjectName("confirmReset")
+        confirm.setAutoDefault(False)
+        confirm.clicked.connect(self.accept)
+        actions.addWidget(cancel)
+        actions.addWidget(confirm)
+        content.addLayout(actions)
+        layout = QVBoxLayout(self)
+        layout.addStretch()
+        layout.addWidget(card, 0, Qt.AlignmentFlag.AlignHCenter)
+        layout.addStretch()
+        cancel.setFocus()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.fillRect(self.rect(), QColor(0, 0, 0, 165))
+
+
+class _Disclosure(QFrame):
+    def __init__(self, title, content):
+        super().__init__()
+        self.setObjectName("disclosure")
+        self.header = QToolButton()
+        self.header.setObjectName("disclosureHeader")
+        self.header.setText(title)
+        self.header.setAccessibleName(title + " 펼치기")
+        self.header.setCheckable(True)
+        self.header.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.header.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.content = content
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(6)
+        layout.addWidget(self.header)
+        layout.addWidget(content)
+        self.header.toggled.connect(self._toggle)
+        self._toggle(False)
+
+    def _toggle(self, expanded):
+        self.header.setArrowType(Qt.ArrowType.DownArrow if expanded else Qt.ArrowType.RightArrow)
+        self.header.setAccessibleName(self.header.text() + (" 접기" if expanded else " 펼치기"))
+        self.content.setVisible(expanded)
+
+
+class _NoFocusItemDelegate(QStyledItemDelegate):
+    def initStyleOption(self, option, index):
+        super().initStyleOption(option, index)
+        # The selected background indicates the current item.
+        option.state &= ~QStyle.StateFlag.State_HasFocus
+
+
+class _ThresholdSpinBox(QSpinBox):
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        option = QStyleOptionSpinBox()
+        self.initStyleOption(option)
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(Qt.PenStyle.NoPen)
+        controls = ((QStyle.SubControl.SC_SpinBoxUp, -1, self.value() < self.maximum()),
+                    (QStyle.SubControl.SC_SpinBoxDown, 1, self.value() > self.minimum()))
+        for control, direction, enabled in controls:
+            rect = self.style().subControlRect(QStyle.ComplexControl.CC_SpinBox, option, control, self)
+            center = rect.center()
+            path = QPainterPath(QPointF(center.x() - 4, center.y() - direction * 2))
+            path.lineTo(center.x() + 4, center.y() - direction * 2)
+            path.lineTo(center.x(), center.y() + direction * 2)
+            path.closeSubpath()
+            painter.setBrush(QColor("#b9bcc8" if enabled and self.isEnabled() else "#626574"))
+            painter.drawPath(path)
+
+
+class _ComparisonComboBox(QComboBox):
+    def paintEvent(self, event):
+        option = QStyleOptionComboBox()
+        self.initStyleOption(option)
+        option.state &= ~QStyle.StateFlag.State_HasFocus
+        painter = QStylePainter(self)
+        painter.drawComplexControl(QStyle.ComplexControl.CC_ComboBox, option)
+        painter.drawControl(QStyle.ControlElement.CE_ComboBoxLabel, option)
 
 
 class _VideoView(QWidget):
@@ -164,14 +343,28 @@ class _VideoView(QWidget):
         super().mousePressEvent(event)
 
 
+def _apply_pretendard():
+    if "Pretendard" not in QFontDatabase.families():
+        font_directory = Path(__file__).resolve().parent / "assets" / "fonts"
+        for weight in ("Regular", "SemiBold", "Bold"):
+            font_path = font_directory / f"Pretendard-{weight}.otf"
+            if QFontDatabase.addApplicationFont(str(font_path)) == -1:
+                raise RuntimeError(f"글꼴을 불러올 수 없습니다: {font_path}")
+    QApplication.instance().setFont(QFont("Pretendard", 10))
+
+
 class TrackingWindow(QWidget):
     def __init__(self, camera_index, device, colors, reset_callback):
         super().__init__()
+        _apply_pretendard()
+        self.setFont(QApplication.font())
         self._colors = [QColor(red, green, blue) for blue, green, red in colors]
         self._reset_callback = reset_callback
         self._aliases = {}
         self._items = {}
         self._visible_ids = set()
+        self._absence_durations: dict[int, float] = {}
+        self._absence_warnings: dict[int, float] = {}
         self._visible_tracks = []
         self._selected_id = None
         self._diagnostic_raw_id = None
@@ -216,6 +409,7 @@ class TrackingWindow(QWidget):
             shortcut.activated.connect(self.close)
         self.name_edit.installEventFilter(self)
         self._selection_changed(None, None)
+        self._refresh_absence_warnings()
 
     def _sidebar(self):
         panel = QFrame()
@@ -225,40 +419,90 @@ class TrackingWindow(QWidget):
         layout.setContentsMargins(13, 13, 13, 13)
         layout.setSpacing(10)
 
+        visible_card, self.visible_count = self._count_card("현재 인원", "visibleCount")
+        visible_card.setToolTip("현재 인원에는 번호 확인 중인 사람도 포함됩니다.")
+        layout.addWidget(visible_card)
         cards = QHBoxLayout()
         cards.setSpacing(8)
-        visible_card, self.visible_count = self._count_card("현재 인원", "visibleCount")
         cumulative_card, self.cumulative_count = self._count_card("누적 인원", "cumulativeCount")
-        cards.addWidget(visible_card, 1)
         cards.addWidget(cumulative_card, 1)
+        self.absence_card = absence_card = QFrame()
+        absence_card.setObjectName("absenceCard")
+        absence_layout = QVBoxLayout(absence_card)
+        absence_layout.setContentsMargins(11, 8, 11, 8)
+        absence_layout.setSpacing(2)
+        absence_title = QLabel("자리 비움 경고")
+        absence_title.setProperty("metricCaption", True)
+        absence_layout.addWidget(absence_title)
+        absence_row = QHBoxLayout()
+        self.absence_count = absence_value = QLabel("0")
+        absence_value.setObjectName("absenceValue")
+        absence_value.setAccessibleName("자리 비움 경고 인원")
+        absence_row.addWidget(absence_value)
+        absence_status = QLabel("명")
+        absence_status.setObjectName("absenceStatus")
+        absence_row.addWidget(absence_status)
+        absence_row.addStretch()
+        absence_layout.addLayout(absence_row)
+        cards.addWidget(absence_card, 1)
         layout.addLayout(cards)
-        note = QLabel("현재 인원에는 번호 확인 중인 사람도 포함됩니다.")
-        note.setWordWrap(True)
-        note.setProperty("detail", True)
-        layout.addWidget(note)
+
+        self.absence_threshold = _ThresholdSpinBox()
+        self.absence_threshold.setRange(1, 600)
+        self.absence_threshold.setValue(60)
+        self.absence_threshold.setSuffix("초")
+        self.absence_threshold.setKeyboardTracking(False)
+        self.absence_threshold.setAccessibleName("자리 비움 경고 기준 시간")
+        self.absence_threshold.setToolTip("이 시간 동안 화면에 보이지 않는 등록 인원을 경고합니다.")
+        self.absence_threshold.valueChanged.connect(self._refresh_absence_warnings)
 
         self.id_list = QListWidget()
         self.id_list.setObjectName("identityList")
+        self.id_list.setItemDelegate(_NoFocusItemDelegate(self.id_list))
+        self.id_list.setMouseTracking(True)
         self.id_list.setAccessibleName("등록된 사람 ID 목록")
         self.id_list.setUniformItemSizes(True)
         self.id_list.setTextElideMode(Qt.TextElideMode.ElideRight)
         self.id_list.currentItemChanged.connect(self._selection_changed)
         self.id_list.itemClicked.connect(self._diagnose_selected_identity)
         self.diagnostics = self._diagnostic_panel()
-        self.side_tabs = QTabWidget()
-        self.side_tabs.setObjectName("trackingSidebarTabs")
-        self.side_tabs.addTab(self.id_list, "등록된 사람")
-        self.side_tabs.addTab(self.diagnostics, "ID 진단")
-        self.side_tabs.currentChanged.connect(self._refresh_diagnostics)
-        layout.addWidget(self.side_tabs, 1)
-
+        self.id_list.setFixedHeight(180)
+        self.diagnostics.setMinimumHeight(300)
+        people_panel = QWidget()
+        people_layout = QVBoxLayout(people_panel)
+        people_layout.setContentsMargins(0, 0, 0, 0)
+        people_layout.setSpacing(12)
+        people_layout.addWidget(self.id_list)
+        self.people_section = _Disclosure("등록된 사람", people_panel)
+        self.diagnostic_section = _Disclosure("ID 진단", self.diagnostics)
+        self.diagnostic_section.header.toggled.connect(self._refresh_diagnostics)
+        details = QWidget()
+        details.setObjectName("sidebarDetails")
+        details_layout = QVBoxLayout(details)
+        details_layout.setContentsMargins(0, 0, 0, 0)
+        details_layout.setSpacing(6)
+        details_layout.addWidget(self.people_section)
+        details_layout.addWidget(self.diagnostic_section)
+        absence_settings = QWidget()
+        absence_settings_layout = QHBoxLayout(absence_settings)
+        absence_settings_layout.setContentsMargins(4, 6, 4, 6)
+        absence_settings_label = QLabel("화면 미검출 시간")
+        absence_settings_label.setProperty("detail", True)
+        absence_settings_layout.addWidget(absence_settings_label, 1)
+        absence_settings_layout.addWidget(self.absence_threshold)
+        self.absence_section = _Disclosure("자리 비움 경고 설정", absence_settings)
+        details_layout.addWidget(self.absence_section)
+        self.name_panel = QWidget()
+        name_layout = QVBoxLayout(self.name_panel)
+        name_layout.setContentsMargins(0, 4, 0, 0)
+        name_layout.setSpacing(8)
         self.name_title = QLabel("표시 이름")
         self.name_title.setProperty("section", True)
-        layout.addWidget(self.name_title)
+        name_layout.addWidget(self.name_title)
         self.name_edit = QLineEdit()
         self.name_edit.setObjectName("nameEdit")
         self.name_edit.setAccessibleName("선택한 사람 표시 이름")
-        self.name_edit.setPlaceholderText("사람을 선택한 뒤 이름 입력")
+        self.name_edit.setPlaceholderText("표시할 이름 입력")
         self.name_edit.setMaxLength(36)
         self.name_edit.returnPressed.connect(self._save_name)
         self.save_button = QPushButton("이름 저장")
@@ -268,15 +512,27 @@ class TrackingWindow(QWidget):
         editor = QHBoxLayout()
         editor.addWidget(self.name_edit, 1)
         editor.addWidget(self.save_button)
-        layout.addLayout(editor)
-        hint = QLabel("빈 이름을 저장하면 기본 번호로 돌아갑니다.")
-        hint.setWordWrap(True)
-        hint.setProperty("detail", True)
-        layout.addWidget(hint)
-        self.reset_button = QPushButton("라벨 및 인원 기록 초기화")
+        name_layout.addLayout(editor)
+        people_layout.addWidget(self.name_panel)
+        details_layout.addStretch()
+        scroll = QScrollArea()
+        scroll.setObjectName("detailsScroll")
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setWidget(details)
+        layout.addWidget(scroll, 1)
+        self.reset_button = QPushButton()
         self.reset_button.setObjectName("resetButton")
+        self.reset_button.setIcon(_reset_icon())
+        self.reset_button.setIconSize(QSize(22, 22))
+        self.reset_button.setFixedSize(36, 36)
+        self.reset_button.setToolTip("라벨 및 인원 기록 초기화")
+        self.reset_button.setAccessibleName("라벨 및 인원 기록 초기화")
         self.reset_button.clicked.connect(self._confirm_reset)
-        layout.addWidget(self.reset_button)
+        reset_row = QHBoxLayout()
+        reset_row.addStretch()
+        reset_row.addWidget(self.reset_button)
+        layout.addLayout(reset_row)
         return panel
 
     def _diagnostic_panel(self):
@@ -300,7 +556,8 @@ class TrackingWindow(QWidget):
         target_row.addWidget(self.diagnostic_state)
         layout.addLayout(target_row)
 
-        self.diagnostic_source = QComboBox()
+        self.diagnostic_source = _ComparisonComboBox()
+        self.diagnostic_source.setItemDelegate(_NoFocusItemDelegate(self.diagnostic_source))
         self.diagnostic_source.setAccessibleName("비교 시점")
         self.diagnostic_source.addItems(["최근 비교", "번호 결정"])
         self.diagnostic_source.currentIndexChanged.connect(self._refresh_diagnostics)
@@ -452,7 +709,7 @@ class TrackingWindow(QWidget):
         self.video.select(report.current.raw_id if report and visible else None)
 
     def _refresh_diagnostics(self):
-        if self.side_tabs.currentWidget() is not self.diagnostics:
+        if not self.diagnostic_section.header.isChecked():
             return
         record, visible = self._selected_report()
         current = record.current if record is not None else None
@@ -533,7 +790,7 @@ class TrackingWindow(QWidget):
                 if face_candidate is not None and face_snapshot is not snapshot:
                     details.append("얼굴 점수는 직전 얼굴 표본의 값입니다.")
                 tooltip = "<qt>" + "<br>".join(escape(detail) for detail in details) + "</qt>"
-            background = QBrush(QColor("#393653")) if matched else QBrush()
+            background = QBrush(QColor("#30304e")) if matched else QBrush()
             for column, value in enumerate(values):
                 item = table.item(row, column)
                 item.setText(value)
@@ -546,11 +803,39 @@ class TrackingWindow(QWidget):
 
     def _update_list_labels(self):
         for person_id, item in self._items.items():
-            state = "화면 안" if person_id in self._visible_ids else "화면 밖"
+            visible = person_id in self._visible_ids
+            state = "화면 안" if visible else "화면 밖"
+            elapsed = None if visible else self._absence_durations.get(person_id)
+            warning = not visible and person_id in self._absence_warnings
+            if elapsed is not None:
+                minutes, seconds = divmod(int(elapsed), 60)
+                state = f'{"확인 필요" if warning else state} ({minutes:02d}:{seconds:02d})'
             label = f"{self._label(person_id)}  ·  {state}"
             if item.text() != label:
                 item.setText(label)
                 item.setToolTip(label)
+                item.setForeground(QBrush(QColor("#f294a9")) if warning else QBrush())
+
+    def update_absences(self, timestamp, last_seen):
+        self._absence_durations = {person_id: max(0.0, timestamp - seen_at)
+                                   for person_id, seen_at in last_seen.items()
+                                   if person_id in self._items and person_id not in self._visible_ids}
+        self._refresh_absence_warnings()
+
+    def _refresh_absence_warnings(self):
+        threshold = self.absence_threshold.value()
+        self._absence_warnings = {person_id: elapsed for person_id, elapsed in self._absence_durations.items()
+                                  if elapsed >= threshold}
+        self.absence_count.setText(str(len(self._absence_warnings)))
+        self.absence_card.setToolTip(f"화면에 {threshold}초 이상 보이지 않는 등록 인원")
+        warning = bool(self._absence_warnings)
+        if self.absence_card.property("warning") != warning:
+            self.absence_card.setProperty("warning", warning)
+            for widget in (self.absence_card, self.absence_count):
+                widget.style().unpolish(widget)
+                widget.style().polish(widget)
+                widget.update()
+        self._update_list_labels()
 
     def _select_id(self, person_id):
         item = self._items.get(person_id)
@@ -570,7 +855,7 @@ class TrackingWindow(QWidget):
         self._diagnostic_raw_id = raw_id
         self._sync_name_from_raw()
         self._sync_video_selection()
-        self.side_tabs.setCurrentWidget(self.diagnostics)
+        self.diagnostic_section.header.setChecked(True)
         self._refresh_diagnostics()
         self.diagnostic_table.scrollToTop()
 
@@ -591,8 +876,9 @@ class TrackingWindow(QWidget):
 
     def _set_name_controls(self, *, checking=False):
         enabled = self._selected_id is not None and not checking
-        title = f"P{self._selected_id:03d} 표시 이름" if enabled else "표시 이름"
+        title = f"P{self._selected_id:03d} 이름 변경" if enabled else "표시 이름"
         self.name_title.setText("번호 확인 중" if checking else title)
+        self.name_panel.setVisible(enabled or checking)
         self.name_edit.setEnabled(enabled)
         self.save_button.setEnabled(enabled)
 
@@ -623,14 +909,8 @@ class TrackingWindow(QWidget):
         self._refresh_diagnostics()
 
     def _confirm_reset(self):
-        dialog = QMessageBox(self)
-        dialog.setWindowTitle("추적 기록 초기화")
-        dialog.setText("등록된 번호, 표시 이름, 누적 인원을 초기화할까요?")
-        dialog.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-        dialog.setDefaultButton(QMessageBox.StandardButton.No)
-        dialog.button(QMessageBox.StandardButton.Yes).setText("초기화")
-        dialog.button(QMessageBox.StandardButton.No).setText("취소")
-        if dialog.exec() != QMessageBox.StandardButton.Yes:
+        dialog = _ResetDialog(self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
             return
         if self._reset_callback() is False:
             return
@@ -648,6 +928,8 @@ class TrackingWindow(QWidget):
         self.diagnostic_source.setCurrentIndex(0)
         self._frame_times.clear()
         self.id_list.clear()
+        self._absence_durations.clear()
+        self._refresh_absence_warnings()
         self._selection_changed(None, None)
         self.visible_count.setText("0")
         self.cumulative_count.setText("0")
