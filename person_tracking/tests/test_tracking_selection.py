@@ -1,4 +1,4 @@
-"""Filtering rendered boxes through the actual identity list."""
+"""Highlighting selected identities while retaining all rendered boxes."""
 
 import os
 from pathlib import Path
@@ -22,7 +22,7 @@ class TrackingSelectionTests(unittest.TestCase):
         cls.app = QApplication.instance() or QApplication([])
 
     def setUp(self):
-        self.window = TrackingWindow(0, "CPU", [(100, 170, 220)], lambda: True)
+        self.window = TrackingWindow(0, "CPU", [(100, 170, 220), (220, 130, 90)], lambda: True)
         self.show_people([1, 2, None])
         self.window.people_section.header.click()
         self.window.show()
@@ -45,42 +45,49 @@ class TrackingSelectionTests(unittest.TestCase):
         point = widget.visualItemRect(widget.item(row)).center()
         QTest.mouseClick(widget.viewport(), Qt.MouseButton.LeftButton, pos=point)
 
-    def test_select_and_repeat_click_restore_all_boxes(self):
-        self.assertEqual(len(self.window.video._tracks), 3)
+    def box_colors(self):
+        return {track[1]: track[3].name() for track in self.window.video._tracks}
+
+    def test_select_and_repeat_click_restore_colors(self):
+        original = self.box_colors()
+        self.assertEqual(len(original), 3)
         self.click_person(0)
-        self.assertEqual(len(self.window.video._tracks), 1)
-        self.assertEqual(self.window.video._tracks[0][1], 10)
+        self.assertEqual(self.box_colors(), {10: original[10], 11: "#868c96", 12: "#868c96"})
         self.assertEqual(self.window.visible_count.text(), "3")
         self.assertEqual(self.window.cumulative_count.text(), "3")
         self.click_person(0)
         self.assertIsNone(self.window._selected_id)
-        self.assertEqual(len(self.window.video._tracks), 3)
+        self.assertEqual(self.box_colors(), original)
 
     def test_switch_person_and_blank_click(self):
+        original = self.box_colors()
         self.click_person(0)
         self.click_person(1)
-        self.assertEqual(self.window.video._tracks[0][1], 11)
+        self.assertEqual(self.box_colors(), {10: "#868c96", 11: original[11], 12: "#868c96"})
         widget = self.window.id_list
         widget.setFixedHeight(180)
         self.app.processEvents()
         QTest.mouseClick(widget.viewport(), Qt.MouseButton.LeftButton,
                          pos=QPoint(8, widget.viewport().height() - 5))
-        self.assertEqual(len(self.window.video._tracks), 3)
+        self.assertEqual(self.box_colors(), original)
 
-    def test_filter_persists_across_frames_and_reappearance(self):
+    def test_highlight_persists_across_frames_and_reappearance(self):
         self.click_person(0)
         self.show_people([2, None])
-        self.assertEqual(self.window.video._tracks, [])
+        self.assertEqual(self.box_colors(), {10: "#868c96", 11: "#868c96"})
         self.show_people([2, 1, None])
-        self.assertEqual(len(self.window.video._tracks), 1)
-        self.assertEqual(self.window.video._tracks[0][1], 11)
+        self.assertEqual(len(self.window.video._tracks), 3)
+        self.assertEqual(self.box_colors()[11], self.window._colors[0].name())
+        self.assertEqual(self.box_colors()[10], "#868c96")
+        self.assertEqual(self.box_colors()[12], "#868c96")
 
-    def test_reset_clears_filter(self):
+    def test_reset_clears_highlight(self):
+        original = self.box_colors()
         self.click_person(0)
         self.window.clear_session()
         self.show_people([1, 2, None])
         self.assertIsNone(self.window._selected_id)
-        self.assertEqual(len(self.window.video._tracks), 3)
+        self.assertEqual(self.box_colors(), original)
 
 
 if __name__ == "__main__":

@@ -790,10 +790,16 @@ class TrackingWindow(QWidget):
         return f"P{person_id:03d}  {alias}" if alias else f"P{person_id:03d}"
 
     def _draw_tracks(self):
-        return [(box, raw_id, self._label(person_id) + ("  matched" if matched else ""),
-                 self._colors[(person_id - 1) % len(self._colors)] if person_id is not None
-                 else QColor("#b7c1ce")) for box, raw_id, person_id, matched in self._visible_tracks
-                if self._selected_id is None or person_id == self._selected_id]
+        tracks = []
+        for box, raw_id, person_id, matched in self._visible_tracks:
+            color = QColor("#b7c1ce")
+            if person_id is not None:
+                color = self._colors[(person_id - 1) % len(self._colors)]
+            if self._selected_id is not None and person_id != self._selected_id:
+                color = QColor("#868c96")
+            label = self._label(person_id) + ("  matched" if matched else "")
+            tracks.append((box, raw_id, label, color))
+        return tracks
 
     def _record_diagnostics(self, assignments):
         self._visible_raw_ids = {item.raw_id for item in assignments}
