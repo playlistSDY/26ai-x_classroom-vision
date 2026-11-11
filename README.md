@@ -65,7 +65,7 @@ SHA-256을 검증합니다. 창에서 이름 입력란 밖의 Q 또는 Esc로 �
 
 현재 프로젝트는 **사전 학습 모델의 추론 앱**이며 학습·파인튜닝 코드는 없습니다.
 MLflow는 카메라 실행 하나를 하나의 **Run**, 여러 실행을 묶는 단위를 **Experiment**로
-관리합니다. 학습 loss나 정확도를 자동 측정하는 기능은 아니며,
+관리합니다. 학습 loss는 기록하지 않으며, 정확도 지표는 아래의 정답 기반 영상 평가에서 계산합니다.
 가중치는 Run의 아티팩트로 관리합니다. Model Registry 등록·배포 및 Registry 모델을
 앱으로 불러오는 기능은 포함하지 않습니다.
 
@@ -112,6 +112,8 @@ Run 여러 개를 선택하고 **Compare**로 설정과 지표를 비교하세�
 | --- | --- |
 | `frames_processed` | Run 전체 처리 프레임 수 |
 | `mean_process_ms` / `window_process_ms` | 전체 / 최근 기록 구간의 프레임당 평균 추적 처리 시간(ms). 카메라 대기·화면 렌더링·MLflow 전송 시간 제외 |
+| `actual_fps` | 모델 로딩 후 입력 수집 시작부터 마지막 처리 완료까지의 실제 처리 프레임 수 / 벽시계 시간. 카메라 대기·화면 갱신·주기적 로그 전송 지연 포함 |
+| `pipeline_frames` / `pipeline_seconds` | 실제 FPS 계산에 사용한 완료 프레임 수 / 경과 시간 |
 | `mean_visible_people` | 프레임별 추적 박스 수의 평균. 실제 인원 정답이 아님 |
 | `checking_ratio` | 전체 사람 관측 중 ID 미확정 관측의 비율 |
 | `reidentified_observations` | `reidentified` 판정을 받은 관측 누적 수. 고유 인원 수가 아님 |
@@ -166,6 +168,42 @@ export MLFLOW_EXPERIMENT_NAME=classroom-team
 - 영상, 얼굴 이미지·임베딩, 사람별 ID·이름은 MLflow로 전송하지 않습니다. 집계 정보도 민감할 수 있으므로 저장소 접근을 제한하세요.
 - 기록은 약 5초 간격의 동기 전송입니다. 원격 서버 지연은 화면을 잠시 멈출 수 있으며, 기록 실패는 실행 오류로 처리합니다. 서버 주소·권한을 확인하거나 `--mlflow` 없이 실행하세요.
 - MLflow 연동 검증: `.venv/bin/python -m unittest discover -s person_tracking/tests -v`. 선택 의존성이 없으면 MLflow 테스트만 건너뜁니다.
+
+### 6. 정답 기반 탐지·추적 성능 평가
+
+카메라 실행만으로 정확도는 알 수 없습니다. **프레임별 사람 박스와 동일 인물 ID를
+직접 라벨링한 정답**이 있는 영상을 별도 평가해야 합니다.
+실제 FPS는 기존 카메라 `--mlflow` 실행에도 기록되며, 나머지 지표는 아래 평가 명령으로 기록합니다.
+
+```sh
+.venv/bin/python -m pip install -r person_tracking/requirements-evaluation.txt
+.venv/bin/python person_tracking/evaluate_tracking.py \
+  --video data/classroom.avi --ground-truth data/gt.txt \
+  --mlflow --tracking-uri http://127.0.0.1:5000 \
+  --experiment-name classroom-vision --run-name classroom-evaluation
+```
+
+위 경로는 예시이며 실제 영상과 라벨로 바꿔야 합니다. 저장소에는 정답 라벨이 포함되어 있지 않습니다.
+대시보드의 해당 Run → **Metrics**에서 다음 값을 확인합니다. 비율은 0~1이며 높을수록 좋고,
+`id_switches`는 낮을수록 좋습니다. `actual_fps` 단위는 프레임/초입니다.
+
+| 평가 지표 | MLflow 키 | 계산 목적·기준 |
+| --- | --- | --- |
+| Precision / Recall | `precision` / `recall` | ID 확정 전, 중복 제거 후 사람 탐지 박스와 정답을 IoU 0.5로 일대일 매칭한 정밀도·재현율 |
+| IDF1 | `idf1` | 영상 전체의 정답 ID와 확정 세션 ID를 최적으로 대응시킨 Identity F1 |
+| ID Switches | `id_switches` | 같은 정답 인물에 대응한 세션 ID 변경 수. TrackEval CLEAR 기준, 가림 후 변경도 포함 |
+| HOTA | `hota` | TrackEval HOTA. IoU 0.05~0.95의 19개 기준에서 탐지·연결 정확도를 함께 평가한 평균 |
+| Re-ID Accuracy | `reid_accuracy` | 정답상 부재 뒤 첫 복귀 프레임에서 마지막 관측 ID를 되찾은 비율. 아래 문서의 재입장 평가 정의 사용 |
+| Actual FPS | `actual_fps` | 입력 디코딩부터 추적·평가 입력 누적·주기적 로깅까지의 실제 처리 속도. 오프라인 평가는 GUI가 없으므로 카메라 모드와 직접 비교하지 않음 |
+
+`Checking`은 탐지 평가에는 포함하지만 확정 ID가 아니므로 IDF1/HOTA에서는 추적 누락으로 처리합니다.
+Re-ID 평가 가능한 복귀가 없으면 `reid_accuracy`는 기록하지 않으며, `reid_events=0`과
+평가 JSON의 이유를 확인할 수 있습니다. 0%나 100%로 임의 표시하지 않습니다.
+
+집계 결과는 기본 `outputs/evaluation.json`과 Run의 `evaluation/summary.json`에 저장됩니다.
+영상과 라벨은 업로드하지 않으며, 재현성 확인용 SHA-256만 기록합니다.
+라벨 형식, Re-ID 분모와 FPS 측정 범위는
+[사람 추적 README의 평가 안내](person_tracking/README.md#정답-기반-영상-평가)에 정리했습니다.
 
 ## 강의실 영상 검증
 

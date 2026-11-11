@@ -6,6 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -61,6 +62,35 @@ class ExperimentTrackingTests(unittest.TestCase):
             with TrackingExperiment(self.uri, "test") as experiment:
                 raise RuntimeError("inference failed")
         self.assertEqual(self.client.get_run(experiment.run_id).info.status, "FAILED")
+
+    def test_actual_fps_uses_wall_time_not_inference_time(self):
+        with TrackingExperiment(self.uri, "test") as experiment:
+            with patch("experiment_tracking.time.monotonic", return_value=100):
+                experiment.start_pipeline()
+            with patch("experiment_tracking.time.monotonic", return_value=100.25):
+                experiment.record([], [], 0, 20)
+                experiment.complete_pipeline_frame()
+            experiment.reset_session()
+            with patch("experiment_tracking.time.monotonic", return_value=101):
+                experiment.record([], [], 0, 20)
+                experiment.complete_pipeline_frame()
+        metrics = self.client.get_run(experiment.run_id).data.metrics
+        self.assertEqual(metrics["mean_process_ms"], 20)
+        self.assertEqual(metrics["actual_fps"], 2)
+        self.assertEqual(metrics["pipeline_frames"], 2)
+        self.assertEqual(metrics["pipeline_seconds"], 1)
+
+    def test_evaluation_skips_unavailable_reid_and_keeps_summary(self):
+        with TrackingExperiment(self.uri, "test") as experiment:
+            experiment.log_evaluation({"metrics": {"precision": 0.75, "idf1": 0.5,
+                                                  "reid_accuracy": None, "reid_events": 0},
+                                       "protocol": {"reid_unavailable_reason": "no events"}})
+        metrics = self.client.get_run(experiment.run_id).data.metrics
+        self.assertEqual(metrics["precision"], 0.75)
+        self.assertEqual(metrics["idf1"], 0.5)
+        self.assertNotIn("reid_accuracy", metrics)
+        artifact = self.client.download_artifacts(experiment.run_id, "evaluation/summary.json")
+        self.assertIn("no events", Path(artifact).read_text())
 
     def test_interrupt_is_marked_killed(self):
         with self.assertRaises(KeyboardInterrupt):

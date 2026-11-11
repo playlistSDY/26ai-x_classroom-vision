@@ -35,6 +35,9 @@ class TrackingExperiment:
         self.session_identities = 0
         self.window_frames = 0
         self.window_ms = 0.0
+        self.pipeline_started = None
+        self.pipeline_completed = None
+        self.pipeline_frames = 0
         self.last_logged = time.monotonic()
         print(f"MLflow run: {self.run_id}", flush=True)
 
@@ -76,6 +79,25 @@ class TrackingExperiment:
         self.resets += 1
         self.session_identities = 0
 
+    def start_pipeline(self, timestamp=None):
+        """Start wall-clock timing after model loading, before input acquisition."""
+        self.pipeline_started = time.monotonic() if timestamp is None else timestamp
+
+    def complete_pipeline_frame(self, timestamp=None):
+        """Called after decoding/capture, inference, logging and presentation."""
+        self.pipeline_completed = time.monotonic() if timestamp is None else timestamp
+        self.pipeline_frames += 1
+
+    def log_evaluation(self, report):
+        from mlflow.entities import Metric
+
+        timestamp = int(time.time() * 1000)
+        self.client.log_batch(self.run_id, metrics=[
+            Metric(key, float(value), timestamp, self.frames)
+            for key, value in report["metrics"].items() if value is not None
+        ])
+        self.client.log_dict(self.run_id, report, "evaluation/summary.json")
+
     def flush(self):
         from mlflow.entities import Metric
 
@@ -92,6 +114,12 @@ class TrackingExperiment:
         }
         if self.window_frames:
             metrics["window_process_ms"] = self.window_ms / self.window_frames
+        if self.pipeline_started is not None and self.pipeline_completed is not None:
+            elapsed = self.pipeline_completed - self.pipeline_started
+            if elapsed > 0:
+                metrics["actual_fps"] = self.pipeline_frames / elapsed
+                metrics["pipeline_frames"] = self.pipeline_frames
+                metrics["pipeline_seconds"] = elapsed
         timestamp = int(time.time() * 1000)
         self.client.log_batch(self.run_id, metrics=[
             Metric(key, float(value), timestamp, self.frames) for key, value in metrics.items()

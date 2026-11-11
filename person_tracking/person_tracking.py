@@ -248,6 +248,7 @@ class PersonTracking:
         self.identities = IdentityTracker(diagnostics=True)
         self.sampled_at = {}
         self.display_times = deque(maxlen=30)
+        self.last_detection_boxes = np.empty((0, 4), dtype=np.float32)
 
     def reset_session(self):
         """Start assigning IDs from P001 again using the loaded models."""
@@ -268,6 +269,7 @@ class PersonTracking:
             max_det=100, verbose=False,
         )[0]
         detections = deduplicate_people(result.boxes.cpu().numpy())
+        self.last_detection_boxes = np.array(detections.xyxy, copy=True)
         tracks = self.motion_tracker.update(detections, frame)
         height, width = frame.shape[:2]
         observations = []
@@ -442,6 +444,8 @@ def run_camera(camera_index: int, tracking: PersonTracking):
             timestamp, frame = frames.pop()
             observations, assignments = tracking.process(frame, timestamp)
             window.show_frame(frame, observations, assignments, tracking.identities.identities)
+            if tracking.experiment is not None:
+                tracking.experiment.complete_pipeline_frame()
         except (Exception, KeyboardInterrupt) as error:
             errors.append(error)
             window.close()
@@ -449,6 +453,8 @@ def run_camera(camera_index: int, tracking: PersonTracking):
     timer.timeout.connect(poll_frame)
     window.show()
     try:
+        if tracking.experiment is not None:
+            tracking.experiment.start_pipeline()
         worker.start()
         timer.start(10)
         app.exec()
@@ -497,6 +503,7 @@ def main():
             if experiment is not None:
                 experiment.configure(
                     {"camera": args.camera, "device": str(device), "image_size": args.size,
+                     "pipeline_mode": "live-camera",
                      "reid_interval": args.reid_interval, "reid_batch": args.reid_batch,
                      "detector_confidence": 0.10, "max_detections": 100,
                      "gmc_method": "orb", "track_buffer": 30},

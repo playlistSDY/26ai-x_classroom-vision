@@ -1,0 +1,3 @@
+-r requirements-mlflow.txt
+# NumPy-compatible PyPI distribution of the TrackEval metric implementations.
+trackeval==1.3.0
