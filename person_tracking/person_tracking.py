@@ -20,6 +20,7 @@ import sys
 import tempfile
 import time
 from collections import deque
+from contextlib import nullcontext
 from pathlib import Path
 from threading import Event, Thread
 from types import SimpleNamespace
@@ -228,7 +229,8 @@ def occlusion_mask(box, other_boxes):
 
 
 class PersonTracking:
-    def __init__(self, device: torch.device, image_size=768, reid_interval=0.2, batch_size=4):
+    def __init__(self, device: torch.device, image_size=768, reid_interval=0.2, batch_size=4, experiment=None):
+        self.experiment = experiment
         self.device = device
         self.image_size = image_size
         self.reid_interval = reid_interval
@@ -246,6 +248,7 @@ class PersonTracking:
         self.identities = IdentityTracker(diagnostics=True)
         self.sampled_at = {}
         self.display_times = deque(maxlen=30)
+        self.last_detection_boxes = np.empty((0, 4), dtype=np.float32)
 
     def reset_session(self):
         """Start assigning IDs from P001 again using the loaded models."""
@@ -254,15 +257,19 @@ class PersonTracking:
         self.sampled_at.clear()
         self.last_face_at = float("-inf")
         self.display_times.clear()
+        if self.experiment is not None:
+            self.experiment.reset_session()
 
     def process(self, frame: np.ndarray, timestamp: float):
         """Return raw observations and global assignments before drawing overlays."""
+        started = time.perf_counter()
         result = self.detector.predict(
             frame, classes=[0], conf=0.10, imgsz=self.image_size,
             device=str(self.device), quantize=16 if self.device.type == "cuda" else 32,
             max_det=100, verbose=False,
         )[0]
         detections = deduplicate_people(result.boxes.cpu().numpy())
+        self.last_detection_boxes = np.array(detections.xyxy, copy=True)
         tracks = self.motion_tracker.update(detections, frame)
         height, width = frame.shape[:2]
         observations = []
@@ -322,6 +329,9 @@ class PersonTracking:
         active_ids = {observation.raw_id for observation in observations}
         self.sampled_at = {key: stamp for key, stamp in self.sampled_at.items()
                            if key in active_ids or timestamp - stamp < 30}
+        if self.experiment is not None:
+            self.experiment.record(observations, assignments, len(self.identities.identities),
+                                   (time.perf_counter() - started) * 1000)
         return observations, assignments
 
     def annotate(self, frame: np.ndarray, timestamp: float):
@@ -437,6 +447,8 @@ def run_camera(camera_index: int, tracking: PersonTracking):
             window.show_frame(frame, observations, assignments, identities)
             window.update_absences(timestamp, {person_id: identity.last_seen
                                                for person_id, identity in identities.items()})
+            if tracking.experiment is not None:
+                tracking.experiment.complete_pipeline_frame()
         except (Exception, KeyboardInterrupt) as error:
             errors.append(error)
             window.close()
@@ -444,6 +456,8 @@ def run_camera(camera_index: int, tracking: PersonTracking):
     timer.timeout.connect(poll_frame)
     window.show()
     try:
+        if tracking.experiment is not None:
+            tracking.experiment.start_pipeline()
         worker.start()
         timer.start(10)
         app.exec()
@@ -465,16 +479,39 @@ def main():
     parser.add_argument("--size", type=int, default=768, help="검출 입력 크기")
     parser.add_argument("--reid-interval", type=float, default=0.2, help="외형 특징 갱신 간격(초)")
     parser.add_argument("--reid-batch", type=int, default=4, help="재식별 추론 배치 크기")
+    parser.add_argument("--mlflow", action="store_true", help="MLflow에 실행 설정과 집계 지표 기록")
+    parser.add_argument("--tracking-uri", help="MLflow 저장소 또는 서버 URI (기본: 프로젝트 루트의 SQLite)")
+    parser.add_argument("--experiment-name", help="MLflow 실험 이름 (기본: classroom-vision)")
+    parser.add_argument("--run-name", help="MLflow 실행 이름")
+    parser.add_argument("--log-models", action="store_true", help="검증된 모델 가중치도 MLflow 아티팩트로 업로드")
     args = parser.parse_args()
     if args.camera < 0 or args.size < 128 or args.reid_interval <= 0 or args.reid_batch < 1:
         parser.error("카메라는 0 이상, 입력 크기는 128 이상, 간격과 배치는 양수로 지정하세요.")
+    if not args.mlflow and (args.tracking_uri or args.experiment_name or args.run_name or args.log_models):
+        parser.error("MLflow 관련 옵션은 --mlflow와 함께 사용하세요.")
     try:
         device = select_device(args.device)
         if device.type == "cpu":
             torch.set_num_threads(min(torch.get_num_threads(), 6))
         print(f"실행 장치 {device} · 카메라 {args.camera}", flush=True)
-        tracking = PersonTracking(device, args.size, args.reid_interval, args.reid_batch)
-        run_camera(args.camera, tracking)
+        experiment = None
+        if args.mlflow:
+            try:
+                from experiment_tracking import TrackingExperiment
+                experiment = TrackingExperiment(args.tracking_uri, args.experiment_name, args.run_name)
+            except ImportError as error:
+                raise RuntimeError("MLflow를 사용하려면 person_tracking/requirements-mlflow.txt를 설치하세요.") from error
+        with experiment if experiment is not None else nullcontext():
+            tracking = PersonTracking(device, args.size, args.reid_interval, args.reid_batch, experiment)
+            if experiment is not None:
+                experiment.configure(
+                    {"camera": args.camera, "device": str(device), "image_size": args.size,
+                     "pipeline_mode": "live-camera",
+                     "reid_interval": args.reid_interval, "reid_batch": args.reid_batch,
+                     "detector_confidence": 0.10, "max_detections": 100,
+                     "gmc_method": "orb", "track_buffer": 30},
+                    tracking.identities.config, CHECKPOINTS, CACHE, args.log_models)
+            run_camera(args.camera, tracking)
     except KeyboardInterrupt:
         print("추적을 종료했습니다.")
     except (RuntimeError, ValueError, OSError) as error:
