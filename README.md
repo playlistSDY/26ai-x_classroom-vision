@@ -9,7 +9,7 @@
   <img src="docs/assets/tracking-demo.png" alt="Classroom Vision 앱의 사람 추적 박스, 인원 집계, ID 진단 비교표" width="920">
 </p>
 
-<p align="center"><sub>실제 앱 시연 · AIRC-SMARTCLASS 029.avi의 21.84초 화면. 얼굴은 추론 후 시연 이미지에서 가렸습니다.</sub></p>
+<p align="center"><sub>실제 앱 시연 · 팀 제공 수업 영상 IMG_6463.MOV의 15초 지점. 공개용 화면에서는 얼굴을 가렸습니다.</sub></p>
 
 ## 프로젝트 목표
 
@@ -19,7 +19,7 @@ Classroom Vision의 목표는 **강의실에 있는 학생 수를 실시간으�
 
 현재 프로토타입은 카메라에 보이는 인원을 집계하고, 학생이 일어나거나 모니터 뒤에
 가려졌다가 다시 보여도 같은 세션 ID로 이어갈 수 있도록 사람 추적과 재식별을 구현했습니다.
-이 추적 결과를 바탕으로 출석·이탈 기록 기능을 개발할 계획입니다.
+이 추적 결과를 바탕으로 오래 화면에 보이지 않는 ID를 표시합니다. 다음 단계에서는 출석·이탈 기록으로 확장할 계획입니다.
 
 후속 단계에서는 **시험 중 부정행위가 의심되는 장면**을 확인할 수 있도록, 화면에 보이는
 휴대폰이나 종이 등 소지품과 사용 행동을 분석합니다. 시험 중 휴대폰 화면을 보거나 허용되지
@@ -32,6 +32,7 @@ Classroom Vision의 목표는 **강의실에 있는 학생 수를 실시간으�
 | **사람 탐지와 추적** | 카메라 프레임에서 사람 박스를 만들고 움직임을 이어서 추적합니다. 카메라 움직임도 보정합니다. |
 | **세션 ID 재연결** | 외형, 보이는 신체 부위, 품질 기준을 통과한 얼굴 특징을 이전 관측과 비교합니다. 근거가 부족하면 `Checking`으로 표시합니다. |
 | **인원 집계와 라벨** | 현재 화면에 잡힌 인원과 세션에 등록된 누적 ID 수를 따로 집계합니다. 번호에 표시 이름을 붙이거나 세션을 초기화할 수 있습니다. |
+| **자리 비움 타이머와 경고** | 등록된 ID가 화면에서 사라지면 목록에 미검출 시간을 표시합니다. 기본 60초가 지나면 확인 필요 상태로 바뀌고, 같은 ID가 다시 잡히면 타이머와 경고가 사라집니다. 경고 기준은 조절할 수 있습니다. |
 | **ID 진단** | 사람 박스를 선택해 후보별 얼굴·외형·부위 유사도와 판정값을 비교합니다. 얼굴 점수가 비어 있으면 미검출, 크기 부족 등 측정 상태를 보여줍니다. |
 
 ## 사용 기술
@@ -246,7 +247,6 @@ BPBreID의 HRNet 코드에는 [Hippocratic License 3.0](person_tracking/vendor/L
 YuNet과 SFace의 출처 및 이용 조건은 [얼굴 모델 안내](person_tracking/vendor/NOTICE.face-models.md)에
 정리했습니다.
 
-시연 이미지의 영상 출처는 Van Anh Nguyen Thi, Tu Chu Pham Dinh, Son Le Hoang의
-[AIRC-SMARTCLASS Part 2](https://data.mendeley.com/datasets/fw5hs57z78/1)입니다.
-원본의 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)에 따라 출처를 표시했으며,
-프레임에 추적 UI를 덧씌우고 얼굴을 가렸습니다.
+영상 검증에 사용한 `029.avi`는 Van Anh Nguyen Thi, Tu Chu Pham Dinh, Son Le Hoang의
+[AIRC-SMARTCLASS Part 2](https://data.mendeley.com/datasets/fw5hs57z78/1)에 포함돼 있습니다.
+데이터셋은 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)으로 공개됐습니다.

@@ -443,7 +443,10 @@ def run_camera(camera_index: int, tracking: PersonTracking):
         try:
             timestamp, frame = frames.pop()
             observations, assignments = tracking.process(frame, timestamp)
-            window.show_frame(frame, observations, assignments, tracking.identities.identities)
+            identities = tracking.identities.identities
+            window.show_frame(frame, observations, assignments, identities)
+            window.update_absences(timestamp, {person_id: identity.last_seen
+                                               for person_id, identity in identities.items()})
             if tracking.experiment is not None:
                 tracking.experiment.complete_pipeline_frame()
         except (Exception, KeyboardInterrupt) as error:
