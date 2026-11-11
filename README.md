@@ -43,6 +43,129 @@ Classroom Vision의 목표는 **강의실에 있는 학생 수를 실시간으�
 | 외형·부위 비교 | AIM-LTCC, BPBreID | 외형 특징과 공통으로 보이는 신체 부위를 이용한 재식별 |
 | 얼굴 비교 | OpenCV, YuNet, SFace | 얼굴 탐지, 품질 검사, 얼굴 특징 비교 |
 | 추론과 화면 | Python, PyTorch, PySide6 | MPS·CUDA·CPU에서 추론하고 데스크톱 앱에 추적 결과 표시 |
+| 실험 관리 | MLflow (선택 설치) | 실행 설정, 집계 지표, 사용 모델의 출처·해시와 가중치 보관 |
+
+## 설치와 실행
+
+Python 3.11 이상과 카메라를 사용할 수 있는 데스크톱 환경이 필요합니다.
+아래 명령은 모두 **프로젝트 루트**에서 실행합니다.
+
+```sh
+python3.11 -m venv .venv
+.venv/bin/python -m pip install -r person_tracking/requirements.txt
+.venv/bin/python person_tracking/person_tracking.py --camera 0
+```
+
+카메라 번호는 연결 상태에 따라 다릅니다. `--device auto`는 CUDA, MPS, CPU 순서로
+선택하며, 첫 실행 시 모델을 `~/.cache/aix-classroom-tracking/`에 다운로드하고
+SHA-256을 검증합니다. 창에서 이름 입력란 밖의 Q 또는 Esc로 종료합니다.
+자세한 조작과 ID 연결 방식은 [사람 추적 README](person_tracking/README.md)를 참고하세요.
+
+## MLflow로 실행과 모델 관리
+
+현재 프로젝트는 **사전 학습 모델의 추론 앱**이며 학습·파인튜닝 코드는 없습니다.
+MLflow는 카메라 실행 하나를 하나의 **Run**, 여러 실행을 묶는 단위를 **Experiment**로
+관리합니다. 학습 loss나 정확도를 자동 측정하는 기능은 아니며,
+가중치는 Run의 아티팩트로 관리합니다. Model Registry 등록·배포 및 Registry 모델을
+앱으로 불러오는 기능은 포함하지 않습니다.
+
+### 1. 선택 의존성 설치
+
+```sh
+.venv/bin/python -m pip install -r person_tracking/requirements-mlflow.txt
+```
+
+기존 추적 의존성과 MLflow 3.x를 설치합니다. `--mlflow`를 생략하면 MLflow를
+설치하거나 서버를 실행하지 않아도 기존 앱을 그대로 사용할 수 있습니다.
+
+### 2. 로컬 실행 기록과 대시보드
+
+```sh
+.venv/bin/python person_tracking/person_tracking.py \
+  --camera 0 --mlflow --experiment-name classroom-vision --run-name baseline
+```
+
+서버 없이도 프로젝트 루트의 `mlflow.db`(SQLite)에 기록됩니다.
+다른 터미널에서 같은 루트 디렉터리의 대시보드를 엽니다.
+
+```sh
+.venv/bin/mlflow ui --backend-store-uri sqlite:///mlflow.db --host 127.0.0.1 --port 5000
+```
+
+브라우저에서 <http://127.0.0.1:5000>에 접속해 `classroom-vision`을 선택합니다.
+Run 여러 개를 선택하고 **Compare**로 설정과 지표를 비교하세요.
+예를 들어 `--size 640 --run-name size-640`과 `--size 960 --run-name size-960`을
+각각 `--mlflow`와 함께 실행해 처리 시간을 비교할 수 있습니다.
+카메라 장면도 달라질 수 있으므로 이것만으로 인식 성능의 우열을 판단하지 마세요.
+
+### 3. 기록되는 정보
+
+| 구분 | 내용 |
+| --- | --- |
+| Params | 카메라 번호, 실제 실행 장치, 입력 크기, 재식별 간격·배치, 탐지 설정, `identity.*` 매칭 기준 |
+| Metrics | 아래 집계 지표를 약 5초마다, 그리고 종료 시 기록. Step은 처리 프레임 누적 수 |
+| `models/manifest.json` | 사용한 5개 모델의 파일명, 다운로드 출처, 검증된 SHA-256 |
+| `environment.json` | Python, OS, MLflow·PyTorch·Ultralytics·OpenCV 버전 |
+| `models/weights/` | `--log-models`를 지정한 경우에만 검증된 가중치 업로드 |
+
+| 지표 | 의미 |
+| --- | --- |
+| `frames_processed` | Run 전체 처리 프레임 수 |
+| `mean_process_ms` / `window_process_ms` | 전체 / 최근 기록 구간의 프레임당 평균 추적 처리 시간(ms). 카메라 대기·화면 렌더링·MLflow 전송 시간 제외 |
+| `mean_visible_people` | 프레임별 추적 박스 수의 평균. 실제 인원 정답이 아님 |
+| `checking_ratio` | 전체 사람 관측 중 ID 미확정 관측의 비율 |
+| `reidentified_observations` | `reidentified` 판정을 받은 관측 누적 수. 고유 인원 수가 아님 |
+| `face_samples` / `face_feature_ratio` | 얼굴 측정 관측 수 / 그중 얼굴 특징을 얻은 비율. 얼굴 인식 정확도가 아님 |
+| `session_identities` / `session_resets` | 현재 세션 등록 ID 수 / 초기화 횟수 |
+
+창의 **라벨 및 인원 기록 초기화**는 같은 Run 안에서 세션만 초기화합니다.
+프레임 수와 관측 통계는 Run 전체에 누적됩니다. 정상 종료는 `FINISHED`,
+Ctrl+C는 `KILLED`, 실행 중 예외는 `FAILED`로 표시합니다.
+강제 종료나 전원 종료 시에는 종료 기록을 남길 수 없어 `RUNNING`으로 남을 수 있습니다.
+
+### 4. 모델 가중치 보관과 다운로드
+
+```sh
+.venv/bin/python person_tracking/person_tracking.py \
+  --camera 0 --mlflow --run-name baseline-with-weights --log-models
+```
+
+기본값은 출처와 해시만 기록합니다. `--log-models`는 큰 가중치를 Run마다 복사하므로
+저장 공간과 첫 실행 대기 시간이 늘어납니다. Run의 **Artifacts**에서
+`models/weights/`를 확인하고 다운로드할 수 있습니다. CLI로도 받을 수 있습니다.
+
+```sh
+.venv/bin/mlflow artifacts download --tracking-uri sqlite:///mlflow.db \
+  --run-id <RUN_ID> --artifact-path models/weights --dst-path outputs/downloaded-models
+```
+
+`<RUN_ID>`는 실행 시 터미널에 출력되거나 Run 상세 화면에서 확인할 수 있습니다.
+모델의 기존 라이선스는 그대로 적용됩니다. 가중치 업로드는 사용 권한이 있는 저장소로만 하세요.
+
+### 5. 팀 공용 서버 연결
+
+공용 MLflow 서버가 있다면 URI를 지정합니다. 별도 옵션 없이 환경변수로도 설정할 수 있습니다.
+
+```sh
+export MLFLOW_TRACKING_URI=https://mlflow.example.org
+export MLFLOW_EXPERIMENT_NAME=classroom-team
+.venv/bin/python person_tracking/person_tracking.py --camera 0 --mlflow --run-name classroom-a
+```
+
+주소는 실제 서버 주소로 바꾸세요. 우선순위는 `--tracking-uri` / `--experiment-name`,
+환경변수, 기본값 순서입니다. `--run-name`은 생략하면 `camera-tracking`입니다.
+`--tracking-uri`, `--experiment-name`, `--run-name`, `--log-models`는 `--mlflow`와 함께 사용합니다.
+팀 서버는 운영자가 인증·TLS·접근 권한과 영구 아티팩트 저장소를 구성해야 합니다.
+로컬 대시보드를 인증 없이 외부에 공개하지 마세요.
+
+### 저장 위치와 주의 사항
+
+- 로컬 기본 메타데이터는 프로젝트 루트의 `mlflow.db`, 기본 아티팩트는 실행 디렉터리의 `mlruns/`에 저장됩니다. 명령은 루트에서 실행하세요.
+- 원격 서버 사용 시 아티팩트 위치와 접근 권한은 서버의 Experiment 설정을 따릅니다.
+- DB와 아티팩트 디렉터리는 Git에서 제외합니다. 백업·이동할 때는 둘 다 보관하세요. DB만 복사하면 가중치가 유실될 수 있습니다.
+- 영상, 얼굴 이미지·임베딩, 사람별 ID·이름은 MLflow로 전송하지 않습니다. 집계 정보도 민감할 수 있으므로 저장소 접근을 제한하세요.
+- 기록은 약 5초 간격의 동기 전송입니다. 원격 서버 지연은 화면을 잠시 멈출 수 있으며, 기록 실패는 실행 오류로 처리합니다. 서버 주소·권한을 확인하거나 `--mlflow` 없이 실행하세요.
+- MLflow 연동 검증: `.venv/bin/python -m unittest discover -s person_tracking/tests -v`. 선택 의존성이 없으면 MLflow 테스트만 건너뜁니다.
 
 ## 강의실 영상 검증
 

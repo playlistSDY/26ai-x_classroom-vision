@@ -16,6 +16,20 @@ BPBreID 구성요소에는 조건이 있는 [Hippocratic License 3.0](vendor/LIC
 CUDA, Apple Silicon MPS, CPU를 자동 선택하며 `--device mps` 등으로 지정할 수 있습니다.
 최초 실행에는 사람 탐지·외형·부분 신체·얼굴 모델을 다운로드합니다.
 
+## MLflow 기록 (선택)
+
+```sh
+.venv/bin/python -m pip install -r person_tracking/requirements-mlflow.txt
+.venv/bin/python person_tracking/person_tracking.py --camera 0 --mlflow --run-name baseline
+.venv/bin/mlflow ui --backend-store-uri sqlite:///mlflow.db --host 127.0.0.1 --port 5000
+```
+
+마지막 명령은 다른 터미널에서 실행하고 <http://127.0.0.1:5000>에 접속합니다.
+실행 설정, 집계 지표, 모델 출처와 해시를 기록하며 `--log-models`를 추가하면
+가중치도 보관합니다. 얼굴 특징·영상·이름은 전송하지 않습니다.
+설치, 지표 정의, 모델 다운로드와 공용 서버 연결은
+[프로젝트 README의 MLflow 안내](../README.md#mlflow로-실행과-모델-관리)를 참고하세요.
+
 ## 카메라 창 조작
 
 - **현재 인원**은 화면에 추적 박스가 표시된 인원입니다. ID를 확인 중인 박스도 포함합니다.

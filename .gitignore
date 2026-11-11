@@ -17,6 +17,11 @@ __pycache__/
 .env
 .env.*
 
+# Local MLflow metadata and model artifacts
+mlflow.db*
+mlruns/
+mlartifacts/
+
 # Local datasets, recordings, and generated results
 /outputs/
 data/
