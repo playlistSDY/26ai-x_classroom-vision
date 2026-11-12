@@ -229,13 +229,15 @@ def occlusion_mask(box, other_boxes):
 
 
 class PersonTracking:
-    def __init__(self, device: torch.device, image_size=768, reid_interval=0.2, batch_size=4, experiment=None):
+    def __init__(self, device: torch.device, image_size=768, reid_interval=0.2, batch_size=4, experiment=None, *, use_aim=True):
         self.experiment = experiment
         self.device = device
         self.image_size = image_size
         self.reid_interval = reid_interval
         self.detector = YOLO(str(checkpoint("yolo26n.pt")), task="detect")
-        self.encoder = BodyEncoder(device, batch_size)
+        self.encoder = BodyEncoder(device, batch_size) if use_aim else None
+        self.checkpoints = {name: source for name, source in CHECKPOINTS.items()
+                            if use_aim or name != "aim-ltcc.pth"}
         self.partial_encoder = PartialBodyEncoder(
             device, batch_size, checkpoint("bpbreid-occluded-duke.pth"))
         self.face_encoder = FaceEncoder(
@@ -306,10 +308,11 @@ class PersonTracking:
             # Keep the existing appearance branch on clear partial crops too:
             # a continuously tracked upper-body view can become a useful anchor.
             # Sparse part evidence blocks enrollment, not matching known views.
-            if observation.quality >= 0.7:
+            if self.encoder is not None and observation.quality >= 0.7:
                 whole_crops.append(crop)
                 whole_indices.append(index)
-        for index, embedding in zip(whole_indices, self.encoder.encode(whole_crops)):
+        body_features = self.encoder.encode(whole_crops) if self.encoder is not None else []
+        for index, embedding in zip(whole_indices, body_features):
             observations[index].embedding = embedding
         # Face sampling is independent of shirt texture, body sharpness and
         # furniture overlap. Association sees every visible person box so one
@@ -479,6 +482,7 @@ def main():
     parser.add_argument("--size", type=int, default=768, help="검출 입력 크기")
     parser.add_argument("--reid-interval", type=float, default=0.2, help="외형 특징 갱신 간격(초)")
     parser.add_argument("--reid-batch", type=int, default=4, help="재식별 추론 배치 크기")
+    parser.add_argument("--no-aim", action="store_true", help="AIM-LTCC 로딩과 전신 외형 추론 비활성화")
     parser.add_argument("--mlflow", action="store_true", help="MLflow에 실행 설정과 집계 지표 기록")
     parser.add_argument("--tracking-uri", help="MLflow 저장소 또는 서버 URI (기본: 프로젝트 루트의 SQLite)")
     parser.add_argument("--experiment-name", help="MLflow 실험 이름 (기본: classroom-vision)")
@@ -502,15 +506,15 @@ def main():
             except ImportError as error:
                 raise RuntimeError("MLflow를 사용하려면 person_tracking/requirements-mlflow.txt를 설치하세요.") from error
         with experiment if experiment is not None else nullcontext():
-            tracking = PersonTracking(device, args.size, args.reid_interval, args.reid_batch, experiment)
+            tracking = PersonTracking(device, args.size, args.reid_interval, args.reid_batch, experiment, use_aim=not args.no_aim)
             if experiment is not None:
                 experiment.configure(
                     {"camera": args.camera, "device": str(device), "image_size": args.size,
-                     "pipeline_mode": "live-camera",
+                     "pipeline_mode": "live-camera", "aim_enabled": not args.no_aim,
                      "reid_interval": args.reid_interval, "reid_batch": args.reid_batch,
                      "detector_confidence": 0.10, "max_detections": 100,
                      "gmc_method": "orb", "track_buffer": 30},
-                    tracking.identities.config, CHECKPOINTS, CACHE, args.log_models)
+                    tracking.identities.config, tracking.checkpoints, CACHE, args.log_models)
             run_camera(args.camera, tracking)
     except KeyboardInterrupt:
         print("추적을 종료했습니다.")

@@ -15,7 +15,7 @@ from pathlib import Path
 import cv2
 import torch
 
-from person_tracking import CACHE, CHECKPOINTS, PersonTracking, select_device
+from person_tracking import CACHE, PersonTracking, select_device
 from tracking_evaluation import SequenceEvaluator, Target, load_ground_truth
 
 
@@ -74,6 +74,7 @@ def main():
     parser.add_argument("--reid-batch", type=int, default=4)
     parser.add_argument("--iou-threshold", type=float, default=0.5)
     parser.add_argument("--reid-gap-frames", type=int, default=1, help="재입장으로 셀 최소 정답 부재 프레임 수")
+    parser.add_argument("--no-aim", action="store_true", help="AIM-LTCC 비활성화 비교 실험")
     parser.add_argument("--mlflow", action="store_true")
     parser.add_argument("--tracking-uri")
     parser.add_argument("--experiment-name")
@@ -103,17 +104,18 @@ def main():
             from experiment_tracking import TrackingExperiment
             experiment = TrackingExperiment(args.tracking_uri, args.experiment_name, args.run_name)
         with experiment if experiment is not None else nullcontext():
-            tracking = PersonTracking(device, args.size, args.reid_interval, args.reid_batch, experiment)
+            tracking = PersonTracking(device, args.size, args.reid_interval, args.reid_batch, experiment, use_aim=not args.no_aim)
             if experiment is not None:
                 experiment.client.set_tag(experiment.run_id, "task", "tracking-evaluation")
                 experiment.configure(
                     {"device": str(device), "image_size": args.size, "reid_interval": args.reid_interval,
-                     "reid_batch": args.reid_batch, "evaluation.iou_threshold": args.iou_threshold,
+                     "reid_batch": args.reid_batch, "aim_enabled": not args.no_aim, "evaluation.iou_threshold": args.iou_threshold,
                      "evaluation.reid_gap_frames": args.reid_gap_frames, "pipeline_mode": "offline-video",
                      "detector_confidence": 0.10, "max_detections": 100,
                      "gmc_method": "orb", "track_buffer": 30},
-                    tracking.identities.config, CHECKPOINTS, CACHE, args.log_models)
+                    tracking.identities.config, tracking.checkpoints, CACHE, args.log_models)
             report = evaluate_video(args.video, args.ground_truth, tracking, evaluator, experiment)
+            report["protocol"]["aim_enabled"] = not args.no_aim
             args.output.parent.mkdir(parents=True, exist_ok=True)
             args.output.write_text(json.dumps(report, indent=2, ensure_ascii=False, allow_nan=False) + "\n", encoding="utf-8")
             if experiment is not None:

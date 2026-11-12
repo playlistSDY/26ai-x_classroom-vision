@@ -16,6 +16,26 @@ BPBreID 구성요소에는 조건이 있는 [Hippocratic License 3.0](vendor/LIC
 CUDA, Apple Silicon MPS, CPU를 자동 선택하며 `--device mps` 등으로 지정할 수 있습니다.
 최초 실행에는 사람 탐지·외형·부분 신체·얼굴 모델을 다운로드합니다.
 
+## AIM-LTCC 비활성화 비교
+
+`--no-aim`을 지정하면 AIM 가중치를 로딩·다운로드하지 않고 전신 외형 특징 추론도
+건너뜁니다. YOLO, BoT-SORT, BPBreID와 얼굴 비교는 유지합니다. 옵션을 생략하면
+기존 5개 모델 구성이며, 판정 임계값은 두 구성에서 동일하게 유지합니다.
+
+```sh
+.venv/bin/python person_tracking/person_tracking.py --camera 0 --no-aim
+
+# 같은 영상·정답·장치로 비교
+.venv/bin/python person_tracking/evaluate_tracking.py \
+  --video data/classroom.avi --ground-truth data/gt.txt --output outputs/aim-on.json
+.venv/bin/python person_tracking/evaluate_tracking.py \
+  --video data/classroom.avi --ground-truth data/gt.txt --no-aim --output outputs/aim-off.json
+```
+
+평가 JSON의 `protocol.aim_enabled`와 MLflow의 `aim_enabled`에 활성화 여부를 기록합니다.
+MLflow 모델 목록·가중치 업로드에서도 비활성화한 AIM은 제외합니다.
+속도와 함께 IDF1, ID Switches, HOTA, 재입장 ID 복구율을 비교하세요.
+
 ## MLflow 기록 (선택)
 
 ```sh
