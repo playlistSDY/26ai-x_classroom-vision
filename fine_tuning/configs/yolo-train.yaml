@@ -1,0 +1,16 @@
+# Paths below are relative to fine_tuning/ (absolute paths also work).
+data: configs/yolo-data.yaml
+project: runs/yolo
+name: classroom-person
+# Starting settings, not optimized hyperparameters.
+epochs: 50
+patience: 10
+imgsz: 768
+batch: 4
+workers: 0
+seed: 42
+deterministic: true
+cache: false
+plots: true
+save: true
+exist_ok: false
