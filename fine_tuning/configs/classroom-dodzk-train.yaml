@@ -1,0 +1,14 @@
+data: configs/classroom-dodzk-data.yaml
+project: runs/yolo
+name: classroom-dodzk-person
+epochs: 50
+patience: 10
+imgsz: 640
+batch: 4
+workers: 2
+seed: 42
+deterministic: true
+cache: false
+plots: true
+save: true
+exist_ok: false
