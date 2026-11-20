@@ -1,4 +1,4 @@
-"""Train/validate classroom person detection independently of the desktop app."""
+"""Train/validate classroom detection independently of the desktop app."""
 from __future__ import annotations
 
 import argparse
@@ -26,8 +26,21 @@ def load_yaml(path):
     return value
 
 
+def class_count(names):
+    if isinstance(names, dict):
+        if set(names) != set(range(len(names))):
+            raise ValueError("클래스 ID는 0부터 연속으로 지정하세요.")
+        names = list(names.values())
+    if not isinstance(names, list) or not names or any(
+        not isinstance(name, str) or not name.strip() for name in names
+    ):
+        raise ValueError("데이터 YAML의 names에 클래스 이름을 지정하세요.")
+    return len(names)
+
+
 def check_split(data, split):
     """Require explicit labels, including empty files for background images."""
+    classes = class_count(data.get("names"))
     relative = data.get(split)
     if not isinstance(relative, str):
         raise ValueError(f"데이터 YAML에 {split} 이미지 폴더를 지정하세요.")
@@ -52,39 +65,53 @@ def check_split(data, split):
             if len(fields) != 5:
                 raise ValueError(f"YOLO 5열 라벨이 필요합니다: {label}:{number}")
             values = [float(value) for value in fields]
-            if (not all(math.isfinite(v) for v in values) or values[0] != 0
+            class_id = values[0]
+            if (not all(math.isfinite(v) for v in values)
+                    or not class_id.is_integer() or not 0 <= class_id < classes
                     or not all(0 <= v <= 1 for v in values[1:])
                     or values[3] <= 0 or values[4] <= 0):
-                raise ValueError(f"class=0, 정규화 좌표, 양수 크기가 필요합니다: {label}:{number}")
+                raise ValueError(
+                    f"클래스 ID 0~{classes - 1}, 정규화 좌표, 양수 크기가 필요합니다: {label}:{number}"
+                )
     return {"images": len(images), "folder": str(folder)}
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="강의실 YOLO 파인튜닝 / 탐지 검증")
-    parser.add_argument("mode", choices=("train", "val"))
+    parser.add_argument("mode", choices=("train", "val", "compare"))
     parser.add_argument("--config", default="configs/yolo-train.yaml", help="fine_tuning/ 기준 경로")
+    parser.add_argument("--data", help="데이터 YAML 덮어쓰기. fine_tuning/ 기준 경로")
     parser.add_argument("--weights", type=Path, help="기존 .pt 가중치. 생략 시 앱의 캐시된 YOLO26n 사용")
+    parser.add_argument("--baseline-weights", type=Path, help="compare의 학습 전 COCO 가중치")
+    parser.add_argument("--tracking-uri", help="compare의 MLflow URI (기본값은 로컬 mlflow.db)")
+    parser.add_argument("--experiment-name", help="compare의 MLflow 실험 이름")
     parser.add_argument("--device", default="cpu", help="cpu, mps, 0 (CUDA)")
     parser.add_argument("--epochs", type=int)
     parser.add_argument("--batch", type=int)
-    parser.add_argument("--split", choices=("val", "test"), default="val")
+    parser.add_argument("--split", choices=("val", "test"), help="val은 기본 val, compare는 기본 test")
     parser.add_argument("--check", action="store_true", help="데이터·설정만 검사. 모델 로딩·학습 없음")
     args = parser.parse_args(argv)
+    args.split = args.split or ("test" if args.mode == "compare" else "val")
+    if args.mode == "compare" and args.weights is None:
+        parser.error("compare에는 학습 후 best.pt를 --weights로 지정하세요.")
+    if args.mode != "compare" and (args.baseline_weights or args.tracking_uri or args.experiment_name):
+        parser.error("MLflow와 기준선 옵션은 compare에서 사용하세요.")
     try:
         config = load_yaml(resolve(args.config))
-        data_file = resolve(config.pop("data"))
+        configured_data = config.pop("data", None)
+        data_file = resolve(args.data or configured_data)
         data = load_yaml(data_file)
-        if data.get("names") not in ({0: "person"}, ["person"]):
-            raise ValueError("현재 파이프라인은 names: {0: person} 단일 클래스만 지원합니다.")
         if "download" in data:
             raise ValueError("로컬 데이터만 사용하세요. download 설정은 지원하지 않습니다.")
         data["path"] = str(resolve(data.get("path", "."), data_file.parent))
         splits = ("train", "val") if args.mode == "train" else (args.split,)
         summary = {split: check_split(data, split) for split in splits}
-        weights = (args.weights.expanduser().resolve() if args.weights else
-                   Path.home() / ".cache/aix-classroom-tracking/yolo26n.pt")
-        if not weights.is_file():
-            raise ValueError(f"기존 YOLO 가중치를 --weights로 지정하세요: {weights}")
+        default_weights = Path.home() / ".cache/aix-classroom-tracking/yolo26n.pt"
+        weights = args.weights.expanduser().resolve() if args.weights else default_weights
+        baseline = args.baseline_weights.expanduser().resolve() if args.baseline_weights else default_weights
+        for checkpoint in (weights, baseline) if args.mode == "compare" else (weights,):
+            if not checkpoint.is_file():
+                raise ValueError(f"기존 YOLO 가중치 파일이 필요합니다: {checkpoint}")
         for key in ("epochs", "batch"):
             value = getattr(args, key)
             if value is not None:
@@ -94,6 +121,8 @@ def main(argv=None):
         config["project"] = str(resolve(config.get("project", "runs/yolo")))
         print(json.dumps({"mode": args.mode, "weights": str(weights), "device": args.device,
                           "data": summary, "config": config}, indent=2, ensure_ascii=False))
+        if args.mode == "compare":
+            print(f"Baseline weights: {baseline}")
         if args.check:
             return 0
         # Persist the resolved dataset so run args remain reusable after training.
@@ -102,6 +131,11 @@ def main(argv=None):
         prepared = ROOT / "runs" / "_datasets" / f"{digest}.yaml"
         prepared.parent.mkdir(parents=True, exist_ok=True)
         prepared.write_text(serialized, encoding="utf-8")
+        if args.mode == "compare":
+            from compare_checkpoints import compare_checkpoints
+
+            compare_checkpoints(args, config, data, prepared, baseline, weights, summary[args.split]["images"])
+            return 0
         from ultralytics import YOLO
         model = YOLO(str(weights), task="detect")
         if args.mode == "train":

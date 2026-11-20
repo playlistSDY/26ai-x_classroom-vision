@@ -2,7 +2,7 @@
 
 강의실 데이터로 모델을 학습하고 결과를 비교하는 공간입니다.
 YOLO는 학습·탐지 검증 실행기를 제공하며, AIM과 BPBreID는 데이터 준비 및 학습 코드 연결을 위한 공간입니다.
-학습은 자동으로 시작하지 않습니다. 현재 실제 학습 데이터는 포함하지 않습니다.
+학습은 명령을 실행할 때 시작합니다. 학습 데이터는 로컬 폴더에 보관합니다.
 
 ```text
 fine_tuning/
@@ -14,6 +14,7 @@ fine_tuning/
     yolo/images/{train,val,test}/
     yolo/labels/{train,val,test}/
     reid/                  # 인물 ID별 크롭·메타데이터 준비
+  dataset/                 # Roboflow ClassRoom 내보내기 (Git 제외)
   checkpoints/             # 로컬 사전학습 가중치 보관 (Git 제외)
   runs/                    # 학습 결과·평가·해석된 데이터 설정 (Git 제외)
 ```
@@ -27,7 +28,71 @@ UI 의존성 없이 학습할 수 있도록 requirements를 분리했습니다.
 .venv/bin/python -m pip install -r fine_tuning/requirements.txt
 ```
 
-## YOLO 데이터 준비
+## Roboflow ClassRoom 데이터로 학습
+
+`fine_tuning/dataset/`에 압축을 풀어 `train/images`, `valid/images`, `test/images`와
+각 분할의 `labels/` 폴더를 둡니다. 원본 클래스 ID는 `0: Student`, `1: with-student`입니다.
+`configs/yolo-roboflow-data.yaml`에서 이 구조를 학습 실행기에 연결합니다.
+
+```sh
+# 훈련·검증과 별도 테스트 분할 검사
+.venv/bin/python fine_tuning/yolo/run.py train --data configs/yolo-roboflow-data.yaml --check
+.venv/bin/python fine_tuning/yolo/run.py val --data configs/yolo-roboflow-data.yaml --split test --check
+
+# 사전학습 YOLO26n에서 학습 시작 (Apple Silicon에서 MPS가 잡히면 --device mps 사용)
+.venv/bin/python fine_tuning/yolo/run.py train --data configs/yolo-roboflow-data.yaml --device cpu
+
+# 최종 모델의 테스트 분할 평가 (실제 실행 폴더명 사용)
+.venv/bin/python fine_tuning/yolo/run.py val --data configs/yolo-roboflow-data.yaml --split test \
+  --weights fine_tuning/runs/yolo/classroom-person/weights/best.pt --device cpu
+```
+
+현재 내보내기는 훈련 316장, 검증 88장, 테스트 46장입니다. 같은 촬영 세션의 연속
+프레임이 다른 분할에 섞였는지 확인한 뒤 최종 성능을 해석하세요. 학습 결과는 이 데이터셋의
+두 클래스 모델이므로 추론 앱에 연결할 때 클래스 매핑을 먼저 검토해야 합니다.
+
+## MLflow에서 파인튜닝 전후 비교
+
+학습 설정과 체크포인트 선택은 검증 분할에서 마치고, 최종 `best.pt`가 생기면 프로젝트 루트에서 실행합니다.
+비교 명령은 학습 시작에 사용한 캐시의 YOLO26n과 `best.pt`를 같은 테스트 이미지 46장에 평가합니다.
+다른 사전학습 파일로 시작했다면 `--baseline-weights`에 그 파일의 경로를 지정하세요.
+
+```sh
+.venv/bin/python -m pip install -r fine_tuning/requirements-mlflow.txt
+
+.venv/bin/python fine_tuning/yolo/run.py compare \
+  --data configs/yolo-roboflow-data.yaml \
+  --weights fine_tuning/runs/yolo/classroom-person/weights/best.pt \
+  --split test --device cpu
+```
+
+같은 이름으로 여러 번 학습했다면 로그에 표시된 실행 폴더의 `weights/best.pt`를 지정합니다.
+테스트 전에 흐름을 점검할 때는 `--split val`을 사용하세요.
+
+비교의 정답은 `Student`와 `with-student` 박스를 모두 하나의 탐지 클래스로 합칩니다.
+사전학습 모델은 COCO `person` 예측만, 파인튜닝 모델은 두 클래스의 예측을 모두 사용합니다.
+이 비교는 클래스 이름 구분을 제외한 박스 탐지 성능을 측정합니다. 파인튜닝 모델의 두 클래스별
+성능은 위의 `val --split test`에서 확인합니다.
+
+다른 터미널에서 프로젝트 루트를 기준으로 대시보드를 엽니다.
+
+```sh
+.venv/bin/mlflow ui --backend-store-uri sqlite:///mlflow.db --host 127.0.0.1 --port 5000
+```
+
+브라우저에서 `http://127.0.0.1:5000`에 접속하고 `classroom-yolo-detection` 실험을 엽니다.
+같은 `comparison_id`를 가진 `before-test-…`와 `after-test-…`를 선택해 **Compare**를 누릅니다.
+
+| 지표 | 비교 기준 |
+| --- | --- |
+| `map50_95` | IoU 0.50~0.95 전반의 박스 탐지 성능. 높을수록 좋음 |
+| `map50`, `precision`, `recall` | IoU 0.50의 AP와 함께 오탐·누락 변화 확인 |
+| `inference_ms_per_image` | 모델 추론의 이미지당 시간. 같은 장치에서 낮을수록 빠름 |
+
+이 시간에는 영상 디코딩, 추적, GUI가 포함되지 않습니다. IDF1/HOTA와 재입장 복구율은
+별도의 정답 영상 추적 평가가 필요합니다. MLflow에는 비교 설정, 체크포인트 해시, 집계 지표를 기록합니다.
+
+## 단일 person 데이터 준비
 
 동일한 이름의 이미지와 라벨을 대응시킵니다.
 

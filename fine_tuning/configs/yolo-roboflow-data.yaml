@@ -1,0 +1,8 @@
+# Keep the directory layout and class IDs from the Roboflow export.
+path: ../dataset
+train: train/images
+val: valid/images
+test: test/images
+names:
+  0: Student
+  1: with-student
