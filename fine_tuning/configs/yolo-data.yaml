@@ -1,0 +1,7 @@
+# path is relative to this YAML file; the launcher resolves it absolutely.
+path: ../data/yolo
+train: images/train
+val: images/val
+# Add test: images/test after preparing a separate held-out test set.
+names:
+  0: person
