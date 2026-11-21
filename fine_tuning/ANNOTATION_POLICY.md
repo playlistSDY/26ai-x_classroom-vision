@@ -1,6 +1,4 @@
-# 강의실 상반신 통합 주석 기준
-
-2026-11-19 적용. 현재 학습 대상은 `upper-body-unified-v2`입니다.
+# 강의실 상반신 주석 기준
 
 ## 사람 박스와 얼굴의 역할
 
@@ -29,65 +27,6 @@ YOLO의 클래스는 `0: person` 하나입니다. 사람 한 명의 머리와 �
 검사와 무작위 12장 표본 재검수를 했습니다. 첫 데이터 전체를 새로 그린 작업은
 아니며, 기존 주석의 완전성을 보장하지 않습니다.
 
-두 번째 데이터는 450장을 원본 및 후보 오버레이로 시각 선별하고, 원본과 다른
-정답을 채택한 이미지에는 결과 오버레이를 다시 확인했습니다. YOLO26n의 첫
-상반신 파인튜닝 모델을 1280 입력·confidence 0.20으로 후보 생성에만 사용했습니다.
-이 모델은 새 강의실의 창문·의자 오탐과 학생 누락을 보였으므로 예측을 일괄
-정답으로 승격하지 않았습니다. 직접 박스를 표시하거나, 후보를 골라 수정하거나,
-원본의 올바른 상반신 박스를 유지했습니다.
+원본 이미지 분할을 유지했습니다. 같은 강의실과 인접 프레임이 여러 분할에 나타날 수 있습니다.
 
-최종 253장을 채택하고 197장은 제외했습니다. 제외된 자료는 원본 폴더에 그대로
-있으며 `review-decisions.json`에 사유를 보관합니다. 이는 450장 전체 재주석이 아닌
-보수적인 선별·부분 재주석입니다. 재주석이 필요한 제외 이미지를 복원하려면 새
-검수 결정을 만든 뒤 새 버전의 데이터셋을 생성해야 합니다.
-
-## 최종 데이터
-
-| 분할 | 첫 데이터 | 두 번째 데이터 | 합계 | 사람 박스 |
-|---|---:|---:|---:|---:|
-| train | 764 | 176 | 940 | 11,635 |
-| valid | 275 | 51 | 326 | 4,819 |
-| test | 235 | 26 | 261 | 2,558 |
-| 전체 | 1,274 | 253 | 1,527 | 19,012 |
-
-두 번째 데이터의 배경 이미지는 train 11장, valid 3장, test 2장입니다.
-원래 Student 주석을 유지한 이미지는 178장입니다. 다른 클래스/배경으로 제공됐던
-이미지는 재검수된 상반신 또는 실제 배경으로 포함하며, 원래 `with-student` 박스를
-일괄 person으로 바꾸지 않았습니다.
-
-train/valid/test 분할은 원본대로 유지했습니다. 통합본에 이미지 SHA-256의 정확한
-중복은 없습니다. 같은 강의실과 인접 프레임이 여러 분할에 나타나므로 이 테스트는
-장소가 독립적인 일반화 평가가 아닙니다. 모델 보조 주석 검수는 독립적인 전문가
-정답 제작과도 구분해야 합니다. 테스트 점수는 선별된 자료의 탐지 성능이며 출석,
-실시간 ID 유지·재입장 정확도를 의미하지 않습니다.
-
-## 파일과 재현
-
-- 원본: `data/roboflow-classroom-dodzk/raw`, `data/shared-classroom-v1/raw`
-- 최종본: `data/upper-body-unified-v2`
-- 확정 검수 결정: 최종본의 `review-decisions.json`
-- 추적 내역·이미지/라벨 해시: 최종본의 `preparation.json`
-- 검수 작업·후보·오버레이: `data/upper-body-unified-v1-review`
-- 생성기: `yolo/prepare_unified_classroom.py`
-- 학습 설정: `configs/upper-body-unified-v2-train.yaml`
-- 학습 및 출처별 평가 실행기: `yolo/train_unified_classroom.py`
-
-```sh
-# 출력이 존재하면 보호 오류를 반환합니다. 변경된 주석에는 새 출력 경로를 사용합니다.
-.venv/bin/python fine_tuning/yolo/prepare_unified_classroom.py
-.venv/bin/python fine_tuning/yolo/run.py train --config configs/upper-body-unified-v2-train.yaml --device 0 --check
-.venv/bin/python -u fine_tuning/yolo/train_unified_classroom.py
-```
-
-v1 초안은 최종 확대 검사에서 머리가 잘린 박스 한 장을 발견해 학습을 중단했습니다.
-v2는 해당 이미지를 추가로 제외한 고정본입니다. v1 결과는 최종 모델로 사용하지 않습니다.
-원본·기존 가중치는 보존하며 데이터·오버레이·검수 결정·가중치는 Git 추적에서 제외합니다.
-
-## 출처
-
-- [reddy projects classroom-dodzk v1](https://universe.roboflow.com/reddy-projects-zulke/classroom-dodzk/dataset/1): CC BY 4.0
-- 사용자가 제공한 ClassRoom v1 ZIP: ZIP 메타데이터의 출처는
-  [buenos-dias/classroom-o4dnp-k83mj/1](https://app.roboflow.com/buenos-dias/classroom-o4dnp-k83mj/1), CC BY 4.0
-
-CC BY 4.0 출처 표시는 원본 제공 메타데이터를 따릅니다. 이번 수정은 두 번째 데이터의
-주석 선별, 단일 상반신 클래스 정리 및 일부 박스 재표시입니다.
+[원본 classroom-dodzk v1 (CC BY 4.0)](https://universe.roboflow.com/reddy-projects-zulke/classroom-dodzk/dataset/1)

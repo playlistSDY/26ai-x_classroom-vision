@@ -62,7 +62,7 @@ def check_split(data, split):
 def main(argv=None):
     parser = argparse.ArgumentParser(description="강의실 YOLO 파인튜닝 / 탐지 검증")
     parser.add_argument("mode", choices=("train", "val"))
-    parser.add_argument("--config", default="configs/upper-body-unified-v2-train.yaml", help="fine_tuning/ 기준 경로")
+    parser.add_argument("--config", default="configs/classroom-dodzk-train.yaml", help="fine_tuning/ 기준 경로")
     parser.add_argument("--weights", type=Path, help="기존 .pt 가중치. 생략 시 앱의 캐시된 YOLO26n 사용")
     parser.add_argument("--device", default="cpu", help="cpu, mps, 0 (CUDA)")
     parser.add_argument("--epochs", type=int)
