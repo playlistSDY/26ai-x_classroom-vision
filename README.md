@@ -46,12 +46,18 @@ Classroom Vision의 목표는 **강의실에 있는 학생 수를 실시간으�
 | 추론과 화면 | Python, PyTorch, PySide6 | MPS·CUDA·CPU에서 추론하고 데스크톱 앱에 추적 결과 표시 |
 | 실험 관리 | MLflow (선택 설치) | 실행 설정, 집계 지표, 사용 모델의 출처·해시와 가중치 보관 |
 
-## 강의실 데이터 통합 파인튜닝과 성능
+## 두 데이터셋 통합 파인튜닝 · 보고서용 정리
+
+이 브랜치는 2026년 11월 19일 완료한 `upper-body-unified-v2` 실험을 보관합니다.
+[보고서용 상세 README](fine_tuning/README.md#보고서에-사용할-수-있는-서술)에는 분석 설정,
+모델 비교, 해석 3문장, 함정 체크와 한계·개선 방향을 정리했습니다.
+ClassRoom 원본 450장만 사용한 두 클래스·768 입력 실험과는 별개의 기록입니다.
 
 원래 앱에서 사용하던 **COCO 사전학습 YOLO26n**을 강의실 상반신 탐지에 맞게
 파인튜닝했습니다. [classroom-dodzk v1](https://universe.roboflow.com/reddy-projects-zulke/classroom-dodzk/dataset/1)의
 정제본 1,274장과 [ClassRoom v1](https://app.roboflow.com/buenos-dias/classroom-o4dnp-k83mj/1)의
-시각 검수 채택본 253장을 합쳐 **1,527장·19,012개 person 박스**로 학습했습니다.
+시각 검수 채택본 253장을 합쳐 **전체 데이터 1,527장·19,012개 person 박스**를 구성했습니다.
+이 중 **학습에는 940장만 사용**하고, 검증 326장과 테스트 261장은 가중치 학습에서 제외했습니다.
 두 원본의 메타데이터에 명시된 라이선스는 CC BY 4.0입니다.
 
 주석은 **한 사람의 머리와 보이는 어깨·몸통을 감싸는 상반신 박스 하나**로 맞췄습니다.
@@ -63,7 +69,8 @@ Classroom Vision의 목표는 **강의실에 있는 학생 수를 실시간으�
 train 940장·valid 326장·test 261장으로 원본 분할을 유지했습니다. 두 가중치를 합치는
 방식이 아니라 **원래 YOLO26n에서 두 정제 데이터를 함께 학습**했습니다. A2000에서
 입력 640·batch 4·seed 42·최대 50 epochs·patience 10으로 실행해 **46 epoch에 조기 종료**됐고,
-검증셋 기준 최적 모델은 36 epoch였습니다.
+검증 mAP50–95 기준 최적 모델은 36 epoch(79.66%)였습니다.
+[46 epoch의 학습·검증 CSV](fine_tuning/reports/unified-v2-training.csv)에서 확인할 수 있습니다.
 
 아래 기존 모델은 첫 파인튜닝 모델이 아니라 **원래 앱의 사전학습 YOLO26n**입니다.
 각 출처의 같은 정제 테스트, 입력 640, CUDA, 예측 클래스 0(person)으로 비교했습니다.
