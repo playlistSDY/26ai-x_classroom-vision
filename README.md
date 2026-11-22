@@ -71,6 +71,7 @@ train 940장·valid 326장·test 261장으로 원본 분할을 유지했습니�
 입력 640·batch 4·seed 42·최대 50 epochs·patience 10으로 실행해 **46 epoch에 조기 종료**됐고,
 검증 mAP50–95 기준 최적 모델은 36 epoch(79.66%)였습니다.
 [46 epoch의 학습·검증 CSV](fine_tuning/reports/unified-v2-training.csv)에서 확인할 수 있습니다.
+[제출용 학습 로그 모음](fine_tuning/reports/unified-v2-logs/README.md)에는 당시 콘솔 출력, 실행 설정과 원본 학습 곡선도 포함했습니다.
 
 아래 기존 모델은 첫 파인튜닝 모델이 아니라 **원래 앱의 사전학습 YOLO26n**입니다.
 각 출처의 같은 정제 테스트, 입력 640, CUDA, 예측 클래스 0(person)으로 비교했습니다.
