@@ -1,0 +1,43 @@
+{
+  "experiment": "upper-body-unified-v2",
+  "completed_on": "2026-11-19",
+  "published_on": "2026-11-22",
+  "files": [
+    {
+      "published": "console.txt",
+      "original_file": "upper-body-unified-v2-20261119-controller.log",
+      "original_sha256": "e06883af31e06f3c54f6112b1861361cefd3cd472fa9848296ac83800a93145d",
+      "published_sha256": "6d9e7149e2c5d9da8a37cd125cee5861574096673ce4b44aba09623490c62075",
+      "changes": [
+        "Removed ANSI terminal escape codes",
+        "Normalized CR and CRLF to LF",
+        "Replaced local project and cache prefixes with <PROJECT_ROOT>/ and <USER_CACHE>/",
+        "Removed trailing whitespace from console lines"
+      ],
+      "scope": "Original controller output, including training, validation and source-specific test evaluation; progress updates retained"
+    },
+    {
+      "published": "args.yaml",
+      "original_file": "yolo/upper-body-unified-v2/args.yaml",
+      "original_sha256": "034e184f68bfdb48d5a3b31648675838131a5de68e17fdedf12114bb961f3f92",
+      "published_sha256": "46318b9cf1bc9cf6be4dc10d2145210786716352f035bc354bca837604a7a3b6",
+      "changes": [
+        "Replaced local project and cache prefixes with <PROJECT_ROOT>/ and <USER_CACHE>/"
+      ]
+    },
+    {
+      "published": "results.png",
+      "original_file": "yolo/upper-body-unified-v2/results.png",
+      "original_sha256": "a39f4ee9734fa009db73f5775c5fadc95aebc09b7f9d0704df127b0a1e90189b",
+      "published_sha256": "a39f4ee9734fa009db73f5775c5fadc95aebc09b7f9d0704df127b0a1e90189b",
+      "changes": []
+    },
+    {
+      "published": "../unified-v2-training.csv",
+      "original_file": "yolo/upper-body-unified-v2/results.csv",
+      "original_sha256": "0b3653a5abf50ba569404e6e854aa86a016ea8b00796bd9d6cd5d5fdd879ed40",
+      "published_sha256": "0b3653a5abf50ba569404e6e854aa86a016ea8b00796bd9d6cd5d5fdd879ed40",
+      "changes": []
+    }
+  ]
+}
