@@ -1,0 +1,12 @@
+torch>=2.6,<3
+torchvision>=0.21,<1
+ultralytics==8.4.202
+opencv-python>=4.13,<6
+numpy>=1.26,<3
+scipy>=1.11,<2
+Pillow>=10,<14
+lap>=0.5.12,<1
+PySide6-Essentials>=6.8.3,<7
+imageio-ffmpeg==0.6.0
+ipykernel>=6.29,<8
+ipywidgets>=8,<9
