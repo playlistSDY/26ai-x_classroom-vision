@@ -36,7 +36,7 @@ class Launcher(QWidget):
         self.process = None
         self.log = None
         self.checking = False
-        self.minimized_for_run = False
+        self.hidden_for_run = False
         self.scans = deque()
         self.scanning = False
         title = QLabel("Classroom Vision")
@@ -162,7 +162,7 @@ class Launcher(QWidget):
         except OSError as error:
             self.log.close();self.status.setText(str(error));return
         self.checking = checking;self.last_log = ""
-        self.minimized_for_run = False
+        self.hidden_for_run = False
         self.output.clear()
         self.status.setText("환경 확인 중…" if checking else "추적 화면을 준비하고 있습니다…")
         self.update_controls()
@@ -193,22 +193,22 @@ class Launcher(QWidget):
                 self.output.setPlainText(text);self.last_log = text
                 scrollbar = self.output.verticalScrollBar();scrollbar.setValue(scrollbar.maximum())
             code = self.process.poll()
-            if (not self.checking and not self.minimized_for_run
+            if (not self.checking and not self.hidden_for_run
                     and "추적 시작 완료" in text and code is None):
-                self.minimized_for_run = True
+                self.hidden_for_run = True
                 self.status.setText("추적 실행 중 · 별도 추적 창을 사용하세요.")
-                self.showMinimized()
+                self.hide()
             if code is not None:
                 self.log.close();self.process = None
                 self.status.setText("환경 확인 완료" if self.checking and code == 0 else
                                     "종료되었습니다." if code in (0, -15) else "실행을 확인해 주세요. 아래 메시지에 원인이 표시됩니다.")
                 self.update_controls()
-                if self.minimized_for_run or code not in (0, -15):
+                if self.hidden_for_run or code not in (0, -15):
                     self.showNormal();self.raise_();self.activateWindow()
                     if sys.platform == "darwin" and QApplication.instance().platformName() != "offscreen":
                         from AppKit import NSApplication
                         NSApplication.sharedApplication().activateIgnoringOtherApps_(True)
-                self.minimized_for_run = False
+                self.hidden_for_run = False
 
     def stop_process(self):
         process = self.process
