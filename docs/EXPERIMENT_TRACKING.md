@@ -149,4 +149,3 @@ Re-ID 평가 가능한 복귀가 없으면 `reid_accuracy`는 기록하지 않�
 영상과 라벨은 업로드하지 않으며, 재현성 확인용 SHA-256만 기록합니다.
 라벨 형식, Re-ID 분모와 FPS 측정 범위는
 [사람 추적 README의 평가 안내](../person_tracking/README.md#정답-기반-영상-평가)에 정리했습니다.
-
