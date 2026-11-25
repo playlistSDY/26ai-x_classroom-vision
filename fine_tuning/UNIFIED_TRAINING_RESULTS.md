@@ -19,8 +19,9 @@ YOLO26n에서 시작, 입력 640, batch 4, 최대 50 epochs, 실제 46 epochs �
 첫 데이터의 이번 시각 재검수는 표본 12장입니다. 실제 설치 장소의 일반화, 출석과 ID 유지 성능은 별도 평가가 필요합니다.
 새 정제 테스트는 과거 450장 원본의 두 클래스 평가와 대상·정답 기준이 달라 직접 비교하지 않습니다.
 
-모델: `fine_tuning/checkpoints/upper-body-unified-v2-best.pt`
+배포 가중치: [`../deploy/models/upper-body-unified-v2-best.pt`](../deploy/models/upper-body-unified-v2-best.pt)
 SHA-256: `857c7d671b47292bf81bcae961d230f1b7913dc5894abdef8e626ddabff0edf2`
 
-통합 모델은 실시간 앱에 자동 적용하지 않았습니다. 기존 두 모델과 원본 자료는 보존했습니다.
+학습 당시 기존 앱의 기본 모델은 유지했습니다. 현재 `deploy/START.ipynb` 실행본은
+이 통합 가중치를 기본으로 사용합니다. 기존 실험과 원본 자료는 보존했습니다.
 준비 코드와 기존 기능의 단위 테스트 18개 및 데이터 사전 검사가 통과했습니다.

@@ -1,299 +1,119 @@
 <h1 align="center">Classroom Vision</h1>
 
 <p align="center">
-  <strong>2026 한양대학교 ERICA AI+X · 팀 어딜가조</strong><br>
-  강의실 학생 수를 실시간으로 집계하고, 출석 확인 후 수업 중 이탈을 확인하는 프로젝트
+  <strong>교실 상반신 탐지 · 학생 추적 · 인원 집계 · 자리 비움 확인</strong><br>
+  2026 한양대학교 ERICA AI+X 공학융합프로젝트 · 팀 어딜가조
 </p>
 
 <p align="center">
-  <img src="docs/assets/tracking-demo.png" alt="Classroom Vision 앱의 사람 추적 박스, 인원 집계, ID 진단 비교표" width="920">
+  <a href="deploy/START.ipynb">시연 노트북</a> ·
+  <a href="deploy/README.md">설치와 실행</a> ·
+  <a href="fine_tuning/README.md">최종 파인튜닝</a> ·
+  <a href="deploy/NOTICE.md">모델·데이터 출처</a>
 </p>
 
-<p align="center"><sub>실제 앱 시연 · 팀 제공 수업 영상 IMG_6463.MOV의 15초 지점. 공개용 화면에서는 얼굴을 가렸습니다.</sub></p>
+<p align="center">
+  <img src="docs/assets/tracking-demo.png" alt="사람별 ID, 현재·누적 인원수, 얼굴·외형 비교를 표시하는 Classroom Vision 앱 화면" width="1000">
+</p>
+<p align="center"><sub>실제 앱 시연 화면 · 팀 제공 수업 영상 IMG_6463.MOV의 15초 지점 · 공개용 얼굴 가림 처리</sub></p>
 
-## 프로젝트 목표
+## 무엇을 만드는가
 
-Classroom Vision의 목표는 **강의실에 있는 학생 수를 실시간으로 집계하고, 출석 확인 뒤
-수업 중 이탈하는 경우(일명 ‘출튀’)를 확인하는 것**입니다. 학생별 이탈 시각과 복귀 여부를
-기록해 잠시 자리를 비웠다가 돌아오는 경우를 구분할 계획입니다.
+강의실 학생 수를 실시간으로 집계하고, 출석 확인 후 수업 중 이탈하는 경우인
+**‘출튀’를 확인할 수 있는 시스템**을 개발합니다. 학생이 가려지거나 화면 밖으로
+나갔다 돌아오는 상황에서 같은 ID를 연결하고, 보이지 않은 시간을 확인하는 것이
+현재 프로토타입의 중심입니다.
 
-현재 프로토타입은 카메라에 보이는 인원을 집계하고, 학생이 일어나거나 모니터 뒤에
-가려졌다가 다시 보여도 같은 세션 ID로 이어갈 수 있도록 사람 추적과 재식별을 구현했습니다.
-이 추적 결과를 바탕으로 오래 화면에 보이지 않는 ID를 표시합니다. 다음 단계에서는 출석·이탈 기록으로 확장할 계획입니다.
+현재는 **사람 탐지·추적, 세션 ID, 인원 집계, 자리 비움 타이머와 경고**를 구현했습니다.
+학생별 출석 확정·이탈 사유 판단은 후속 과제입니다. 이후에는 휴대폰·메모 등 소지품과
+사용 행동을 분석해 시험 중 감독자가 확인할 장면을 표시하는 기능으로 확장합니다.
 
-후속 단계에서는 **시험 중 부정행위가 의심되는 장면**을 확인할 수 있도록, 화면에 보이는
-휴대폰이나 종이 등 소지품과 사용 행동을 분석합니다. 시험 중 휴대폰 화면을 보거나 허용되지
-않은 메모(컨닝페이퍼)로 의심되는 자료를 보는 장면을 감독자가 확인할 수 있게 표시할 계획입니다.
+## 바로 시연하기
+
+1. 저장소를 내려받고 VS Code에서 **[deploy/START.ipynb](deploy/START.ipynb)**를 엽니다.
+2. **로컬 Python 3.13 커널**을 선택하고 **전체 실행**을 누릅니다.
+3. 외부 실행 준비 창에서 **카메라 이름 또는 영상 파일**을 고른 뒤 **추적 시작**을 누릅니다.
+
+필요한 패키지와 보조 모델은 첫 실행에 준비합니다. **최종 파인튜닝 탐지 가중치가 동봉돼
+기본 적용됩니다.** 연산 장치는 CUDA → Mac MPS → CPU 순서로 자동 선택하며 직접 지정할
+수도 있습니다. 추적이 시작되면 준비 창은 숨겨지고, 종료하면 다시 나타납니다.
+서버 연결 없이 실행하며, 준비를 마친 환경에서는 오프라인 시연이 가능합니다.
+
+설치 조건, Windows·Mac 안내, 카메라 권한, 장치 선택과 문제 해결은
+**[배포본 README](deploy/README.md)**에 정리했습니다.
 
 ## 현재 구현
 
-| 기능 | 구현 내용 |
+| 기능 | 동작 |
 | --- | --- |
-| **사람 탐지와 추적** | 카메라 프레임에서 사람 박스를 만들고 움직임을 이어서 추적합니다. 카메라 움직임도 보정합니다. |
-| **세션 ID 재연결** | 외형, 보이는 신체 부위, 품질 기준을 통과한 얼굴 특징을 이전 관측과 비교합니다. 근거가 부족하면 `Checking`으로 표시합니다. |
-| **인원 집계와 라벨** | 현재 화면에 잡힌 인원과 세션에 등록된 누적 ID 수를 따로 집계합니다. 번호에 표시 이름을 붙이거나 세션을 초기화할 수 있습니다. |
-| **자리 비움 타이머와 경고** | 등록된 ID가 화면에서 사라지면 목록에 미검출 시간을 표시합니다. 기본 60초가 지나면 확인 필요 상태로 바뀌고, 같은 ID가 다시 잡히면 타이머와 경고가 사라집니다. 경고 기준은 조절할 수 있습니다. |
-| **ID 진단** | 사람 박스를 선택해 후보별 얼굴·외형·부위 유사도와 판정값을 비교합니다. 얼굴 점수가 비어 있으면 미검출, 크기 부족 등 측정 상태를 보여줍니다. |
+| **교실 상반신 탐지** | COCO 사전학습 YOLO26n을 교실·상반신 데이터로 파인튜닝해 사람별 박스를 검출합니다. |
+| **연속 추적과 ID 연결** | BoT-SORT로 프레임을 연결하고 ORB로 카메라 움직임을 보정합니다. 얼굴·외형·보이는 신체 부위의 특징을 비교해 세션 ID를 연결합니다. |
+| **신규 인물 확인** | 머리·어깨와 관측 품질을 확인하고, 근거가 쌓일 때까지 `Checking`으로 표시합니다. |
+| **인원 집계·이름 지정** | 현재 관측 인원과 누적 등록 ID 수를 표시하고, 선택한 ID의 이름 지정과 세션 초기화를 지원합니다. |
+| **자리 비움 경고** | 등록된 ID가 보이지 않을 때 타이머를 시작하고, 설정한 시간이 지나면 경고합니다. 복귀하면 해제합니다. |
+| **ID 진단 화면** | 선택한 사람과 후보 ID의 얼굴·외형·부위 유사도, 최종 매칭 결과와 측정 상태를 비교합니다. |
+
+## 최종 탐지 모델
+
+**COCO 기본학습 YOLO26n → 교실 및 상반신 데이터셋 2개 통합 파인튜닝**
+
+범용 사람 탐지에서 책상·노트북에 가려진 상반신을 놓치는 문제를 줄이기 위해,
+두 데이터셋의 정답을 **한 사람의 머리와 보이는 어깨·몸통을 감싸는 `person` 박스**로
+통일했습니다. 원본 2,100장에서 정제한 **1,527장·19,012개 박스**를 사용했으며,
+학습 940장·검증 326장·테스트 261장으로 구성했습니다.
+
+동일한 출처별 정제 테스트에서 COCO 기본학습 모델과 최종 모델을 비교했습니다.
+
+| 평가 데이터 | 지표 | COCO 기본학습 | 교실 및 상반신 데이터셋 2개 통합 파인튜닝 | 향상 |
+| --- | --- | ---: | ---: | ---: |
+| 교실 상반신 · 235장 | mAP50–95 | 50.89% | **84.13%** | **+33.24%p** |
+| 교실 상반신 · 235장 | Recall | 53.81% | **98.86%** | **+45.05%p** |
+| 교실 정제 · 26장 | mAP50–95 | 12.66% | **72.84%** | **+60.18%p** |
+| 교실 정제 · 26장 | Recall | 62.32% | **98.97%** | **+36.66%p** |
+
+평가 조건은 입력 640·배치 4·RTX A2000·`person` 클래스입니다. 같은 장소와 인접
+프레임이 분할에 포함되고 일부 주석에는 모델 보조 검수가 사용됐습니다.
+위 수치는 정지 이미지의 상반신 탐지 평가이며, 실제 영상의 ID 전환과 인원 집계는
+별도 확인이 필요합니다.
+
+최종 모델은 RTX A2000 6GB에서 학습했으며, 46에포크에서 종료하고 검증 mAP50–95가
+가장 높은 36에포크의 가중치를 선택했습니다.
+
+- **동봉 가중치:** [deploy/models/upper-body-unified-v2-best.pt](deploy/models/upper-body-unified-v2-best.pt)
+- **학습·정제 기준과 재현:** [fine_tuning/README.md](fine_tuning/README.md)
+- **출처별 원본 평가 수치·해시:** [실험 요약 JSON](fine_tuning/reports/unified-v2-20261119.json)
+- **학습·검증 곡선:** [46에포크 CSV](fine_tuning/reports/unified-v2-training.csv)
 
 ## 사용 기술
 
 | 단계 | 기술 | 역할 |
 | --- | --- | --- |
-| 사람 탐지 | YOLO26n | 영상에서 사람 박스 검출 |
-| 연속 추적 | BoT-SORT, ORB | 프레임 간 박스 연결과 카메라 움직임 보정 |
-| 외형·부위 비교 | AIM-LTCC, BPBreID | 외형 특징과 공통으로 보이는 신체 부위를 이용한 재식별 |
-| 얼굴 비교 | OpenCV, YuNet, SFace | 얼굴 탐지, 품질 검사, 얼굴 특징 비교 |
-| 추론과 화면 | Python, PyTorch, PySide6 | MPS·CUDA·CPU에서 추론하고 데스크톱 앱에 추적 결과 표시 |
-| 실험 관리 | MLflow (선택 설치) | 실행 설정, 집계 지표, 사용 모델의 출처·해시와 가중치 보관 |
+| 탐지 | **YOLO26n · 통합 파인튜닝** | 교실에서 보이는 사람 상반신 검출 |
+| 사람 확인 | **YOLO26n Pose** | 머리·어깨와 보이는 신체 영역 검증 |
+| 연속 추적 | **BoT-SORT + ORB** | 프레임 간 박스 연결·카메라 움직임 보정 |
+| 외형 재식별 | **AIM-LTCC** | 전반적인 외형 특징 비교 |
+| 부분 재식별 | **BPBreID** | 공통으로 보이는 신체 부위 특징 비교 |
+| 얼굴 비교 | **YuNet + SFace** | 얼굴 탐지·품질 확인·특징 비교 |
+| 실행·화면 | **Python · PyTorch · OpenCV · PySide6** | 로컬 추론과 데스크톱 UI |
 
-## 두 데이터셋 통합 파인튜닝 · 보고서용 정리
+배포본은 탐지·포즈·외형·부위·얼굴 탐지·얼굴 비교용 **6개 가중치 파일**을 사용합니다.
+각 모델은 관측 품질과 갱신 주기에 따라 호출합니다.
+파일별 다운로드 출처와 SHA-256은 [모델 목록](deploy/models/manifest.json)에 있습니다.
 
-이 브랜치는 2026년 11월 19일 완료한 `upper-body-unified-v2` 실험을 보관합니다.
-[보고서용 상세 README](fine_tuning/README.md#보고서에-사용할-수-있는-서술)에는 분석 설정,
-모델 비교, 해석 3문장, 함정 체크와 한계·개선 방향을 정리했습니다.
-ClassRoom 원본 450장만 사용한 두 클래스·768 입력 실험과는 별개의 기록입니다.
+## 저장소 구성
 
-원래 앱에서 사용하던 **COCO 사전학습 YOLO26n**을 강의실 상반신 탐지에 맞게
-파인튜닝했습니다. [classroom-dodzk v1](https://universe.roboflow.com/reddy-projects-zulke/classroom-dodzk/dataset/1)의
-정제본 1,274장과 [ClassRoom v1](https://app.roboflow.com/buenos-dias/classroom-o4dnp-k83mj/1)의
-시각 검수 채택본 253장을 합쳐 **전체 데이터 1,527장·19,012개 person 박스**를 구성했습니다.
-이 중 **학습에는 940장만 사용**하고, 검증 326장과 테스트 261장은 가중치 학습에서 제외했습니다.
-두 원본의 메타데이터에 명시된 라이선스는 CC BY 4.0입니다.
-
-주석은 **한 사람의 머리와 보이는 어깨·몸통을 감싸는 상반신 박스 하나**로 맞췄습니다.
-첫 데이터는 클래스 이름 8·9의 상반신만 선택하고 정답 누락 후보 이미지를 제외했습니다.
-두 번째 데이터는 책상·여러 사람을 포함한 박스와 누락·중복을 확인해 일부를 재표시하고
-197장은 제외했습니다. 얼굴 박스는 person 정답에 섞지 않고 기존 얼굴 비교 경로를 유지합니다.
-첫 데이터의 이번 시각 재검수는 표본 12장이며, 두 원본 전체를 새로 재주석한 것은 아닙니다.
-
-train 940장·valid 326장·test 261장으로 원본 분할을 유지했습니다. 두 가중치를 합치는
-방식이 아니라 **원래 YOLO26n에서 두 정제 데이터를 함께 학습**했습니다. A2000에서
-입력 640·batch 4·seed 42·최대 50 epochs·patience 10으로 실행해 **46 epoch에 조기 종료**됐고,
-검증 mAP50–95 기준 최적 모델은 36 epoch(79.66%)였습니다.
-[46 epoch의 학습·검증 CSV](fine_tuning/reports/unified-v2-training.csv)에서 확인할 수 있습니다.
-[제출용 학습 로그 모음](fine_tuning/reports/unified-v2-logs/README.md)에는 당시 콘솔 출력, 실행 설정과 원본 학습 곡선도 포함했습니다.
-
-아래 기존 모델은 첫 파인튜닝 모델이 아니라 **원래 앱의 사전학습 YOLO26n**입니다.
-각 출처의 같은 정제 테스트, 입력 640, CUDA, 예측 클래스 0(person)으로 비교했습니다.
-
-| 테스트 | 모델 | Precision | Recall | mAP50 | mAP50–95 |
-|---|---|---:|---:|---:|---:|
-| classroom-dodzk 235장 | 기존 YOLO26n | 85.48% | 53.81% | 71.15% | 50.89% |
-| classroom-dodzk 235장 | **통합 파인튜닝** | **98.14%** | **98.86%** | **99.27%** | **84.13%** |
-| ClassRoom 정제본 26장 | 기존 YOLO26n | 35.44% | 62.32% | 46.07% | 12.66% |
-| ClassRoom 정제본 26장 | **통합 파인튜닝** | **100.00%** | **98.97%** | **99.50%** | **72.84%** |
-
-기존 YOLO26n 대비 mAP50–95는 각각 **33.24%p·60.18%p**, Recall은 **45.05%p·36.66%p**
-높아졌습니다. 중간의 첫 데이터 전용 person 모델과 비교하면 첫 테스트 mAP50–95는
-84.58% → 84.13%로 소폭 낮아졌고, 새 정제 테스트는 10.37% → 72.84%로 높아졌습니다.
-
-이 결과는 **선별한 이미지의 상반신 탐지 성능**입니다. 기존 모델의 일반 person 박스와
-상반신 정답의 범위 차이도 점수에 영향을 줍니다. 동일 장소·인접 프레임이 분할 간에
-나타나고 새 테스트도 26장으로 작으므로 실제 강의실의 일반화 성능, 출석 정확도,
-IDF1/HOTA·재입장·실시간 FPS 개선을 입증하는 결과로 해석하지 않습니다.
-
-[학습·재현 방법](fine_tuning/README.md) · [주석 기준과 검수 범위](fine_tuning/ANNOTATION_POLICY.md) ·
-[세 모델 상세 비교](fine_tuning/UNIFIED_TRAINING_RESULTS.md) · [수치·설정·해시 JSON](fine_tuning/reports/unified-v2-20261119.json)
-
-데이터·이미지별 검수 원장·가중치는 Git에 포함하지 않습니다. 이 브랜치에서 **앱의 기본
-YOLO26n 가중치는 자동 교체하지 않았으며**, 정제·학습·평가 코드와 결과를 기록했습니다.
-
-## 직접 촬영 영상에서 단독 모델과 비교
-
-약 33초 교실 영상의 동일한 133개 샘플 프레임에서 ClassRoom v1 단독 재학습 모델과
-통합 모델을 비교했습니다. 입력 768·confidence 0.25 등 추론 조건을 맞췄습니다.
-단독 모델은 여러 사람·책상을 큰 박스로 묶는 경우가 많았고, **통합 모델은 사람별
-상반신을 더 잘 분리**했습니다. 통합 모델에도 게시판·빈 의자 오탐과 중복·누락이 남았습니다.
-원래 보고서 가중치가 없어 새로 학습한 모델과 비교했으며, 정답 라벨이 없어 정확도
-수치나 ID 추적 성능 향상을 산출한 결과는 아닙니다.
-
-[얼굴 모자이크 참고 이미지·비교 조건·실제 샘플 기록](fine_tuning/README.md#직접-촬영한-교실-영상의-비교-2026-11-22)을
-함께 확인할 수 있습니다. 모자이크 이미지는 AI 편집 참고본이며 정량 수치의 근거는 실제 추론 기록입니다.
-
-## 설치와 실행
-
-Python 3.11 이상과 카메라를 사용할 수 있는 데스크톱 환경이 필요합니다.
-아래 명령은 모두 **프로젝트 루트**에서 실행합니다.
-
-```sh
-python3.11 -m venv .venv
-.venv/bin/python -m pip install -r person_tracking/requirements.txt
-.venv/bin/python person_tracking/person_tracking.py --camera 0
+```text
+Classroom Vision/
+├── deploy/          # 발표·시연용 실행본 · START.ipynb · 최종 가중치
+├── fine_tuning/     # 데이터 정제·학습·평가 코드와 최종 실험 기록
+├── person_tracking/ # 개발용 원본 앱 · 실험 기록·정답 영상 평가
+└── docs/            # 공개용 시연 이미지·개발 문서
 ```
 
-카메라 번호는 연결 상태에 따라 다릅니다. `--device auto`는 CUDA, MPS, CPU 순서로
-선택하며, 첫 실행 시 모델을 `~/.cache/aix-classroom-tracking/`에 다운로드하고
-SHA-256을 검증합니다. 창에서 이름 입력란 밖의 Q 또는 Esc로 종료합니다.
-자세한 조작과 ID 연결 방식은 [사람 추적 README](person_tracking/README.md)를 참고하세요.
-
-## MLflow로 실행과 모델 관리
-
-YOLO 학습·파인튜닝은 [fine_tuning](fine_tuning/README.md)에서 실행합니다.
-아래 MLflow 연동은 **추론 실행과 정답 영상 평가**를 기록하는 기능입니다.
-MLflow는 카메라 실행 하나를 하나의 **Run**, 여러 실행을 묶는 단위를 **Experiment**로
-관리합니다. 학습 loss는 기록하지 않으며, 정확도 지표는 아래의 정답 기반 영상 평가에서 계산합니다.
-가중치는 Run의 아티팩트로 관리합니다. Model Registry 등록·배포 및 Registry 모델을
-앱으로 불러오는 기능은 포함하지 않습니다.
-
-### 1. 선택 의존성 설치
-
-```sh
-.venv/bin/python -m pip install -r person_tracking/requirements-mlflow.txt
-```
-
-기존 추적 의존성과 MLflow 3.x를 설치합니다. `--mlflow`를 생략하면 MLflow를
-설치하거나 서버를 실행하지 않아도 기존 앱을 그대로 사용할 수 있습니다.
-
-### 2. 로컬 실행 기록과 대시보드
-
-```sh
-.venv/bin/python person_tracking/person_tracking.py \
-  --camera 0 --mlflow --experiment-name classroom-vision --run-name baseline
-```
-
-서버 없이도 프로젝트 루트의 `mlflow.db`(SQLite)에 기록됩니다.
-다른 터미널에서 같은 루트 디렉터리의 대시보드를 엽니다.
-
-```sh
-.venv/bin/mlflow ui --backend-store-uri sqlite:///mlflow.db --host 127.0.0.1 --port 5000
-```
-
-브라우저에서 <http://127.0.0.1:5000>에 접속해 `classroom-vision`을 선택합니다.
-Run 여러 개를 선택하고 **Compare**로 설정과 지표를 비교하세요.
-예를 들어 `--size 640 --run-name size-640`과 `--size 960 --run-name size-960`을
-각각 `--mlflow`와 함께 실행해 처리 시간을 비교할 수 있습니다.
-카메라 장면도 달라질 수 있으므로 이것만으로 인식 성능의 우열을 판단하지 마세요.
-
-### 3. 기록되는 정보
-
-| 구분 | 내용 |
-| --- | --- |
-| Params | 카메라 번호, 실제 실행 장치, 입력 크기, 재식별 간격·배치, 탐지 설정, `identity.*` 매칭 기준 |
-| Metrics | 아래 집계 지표를 약 5초마다, 그리고 종료 시 기록. Step은 처리 프레임 누적 수 |
-| `models/manifest.json` | 사용한 5개 모델의 파일명, 다운로드 출처, 검증된 SHA-256 |
-| `environment.json` | Python, OS, MLflow·PyTorch·Ultralytics·OpenCV 버전 |
-| `models/weights/` | `--log-models`를 지정한 경우에만 검증된 가중치 업로드 |
-
-| 지표 | 의미 |
-| --- | --- |
-| `frames_processed` | Run 전체 처리 프레임 수 |
-| `mean_process_ms` / `window_process_ms` | 전체 / 최근 기록 구간의 프레임당 평균 추적 처리 시간(ms). 카메라 대기·화면 렌더링·MLflow 전송 시간 제외 |
-| `actual_fps` | 모델 로딩 후 입력 수집 시작부터 마지막 처리 완료까지의 실제 처리 프레임 수 / 벽시계 시간. 카메라 대기·화면 갱신·주기적 로그 전송 지연 포함 |
-| `pipeline_frames` / `pipeline_seconds` | 실제 FPS 계산에 사용한 완료 프레임 수 / 경과 시간 |
-| `mean_visible_people` | 프레임별 추적 박스 수의 평균. 실제 인원 정답이 아님 |
-| `checking_ratio` | 전체 사람 관측 중 ID 미확정 관측의 비율 |
-| `reidentified_observations` | `reidentified` 판정을 받은 관측 누적 수. 고유 인원 수가 아님 |
-| `face_samples` / `face_feature_ratio` | 얼굴 측정 관측 수 / 그중 얼굴 특징을 얻은 비율. 얼굴 인식 정확도가 아님 |
-| `session_identities` / `session_resets` | 현재 세션 등록 ID 수 / 초기화 횟수 |
-
-창의 **라벨 및 인원 기록 초기화**는 같은 Run 안에서 세션만 초기화합니다.
-프레임 수와 관측 통계는 Run 전체에 누적됩니다. 정상 종료는 `FINISHED`,
-Ctrl+C는 `KILLED`, 실행 중 예외는 `FAILED`로 표시합니다.
-강제 종료나 전원 종료 시에는 종료 기록을 남길 수 없어 `RUNNING`으로 남을 수 있습니다.
-
-### 4. 모델 가중치 보관과 다운로드
-
-```sh
-.venv/bin/python person_tracking/person_tracking.py \
-  --camera 0 --mlflow --run-name baseline-with-weights --log-models
-```
-
-기본값은 출처와 해시만 기록합니다. `--log-models`는 큰 가중치를 Run마다 복사하므로
-저장 공간과 첫 실행 대기 시간이 늘어납니다. Run의 **Artifacts**에서
-`models/weights/`를 확인하고 다운로드할 수 있습니다. CLI로도 받을 수 있습니다.
-
-```sh
-.venv/bin/mlflow artifacts download --tracking-uri sqlite:///mlflow.db \
-  --run-id <RUN_ID> --artifact-path models/weights --dst-path outputs/downloaded-models
-```
-
-`<RUN_ID>`는 실행 시 터미널에 출력되거나 Run 상세 화면에서 확인할 수 있습니다.
-모델의 기존 라이선스는 그대로 적용됩니다. 가중치 업로드는 사용 권한이 있는 저장소로만 하세요.
-
-### 5. 팀 공용 서버 연결
-
-공용 MLflow 서버가 있다면 URI를 지정합니다. 별도 옵션 없이 환경변수로도 설정할 수 있습니다.
-
-```sh
-export MLFLOW_TRACKING_URI=https://mlflow.example.org
-export MLFLOW_EXPERIMENT_NAME=classroom-team
-.venv/bin/python person_tracking/person_tracking.py --camera 0 --mlflow --run-name classroom-a
-```
-
-주소는 실제 서버 주소로 바꾸세요. 우선순위는 `--tracking-uri` / `--experiment-name`,
-환경변수, 기본값 순서입니다. `--run-name`은 생략하면 `camera-tracking`입니다.
-`--tracking-uri`, `--experiment-name`, `--run-name`, `--log-models`는 `--mlflow`와 함께 사용합니다.
-팀 서버는 운영자가 인증·TLS·접근 권한과 영구 아티팩트 저장소를 구성해야 합니다.
-로컬 대시보드를 인증 없이 외부에 공개하지 마세요.
-
-### 저장 위치와 주의 사항
-
-- 로컬 기본 메타데이터는 프로젝트 루트의 `mlflow.db`, 기본 아티팩트는 실행 디렉터리의 `mlruns/`에 저장됩니다. 명령은 루트에서 실행하세요.
-- 원격 서버 사용 시 아티팩트 위치와 접근 권한은 서버의 Experiment 설정을 따릅니다.
-- DB와 아티팩트 디렉터리는 Git에서 제외합니다. 백업·이동할 때는 둘 다 보관하세요. DB만 복사하면 가중치가 유실될 수 있습니다.
-- 영상, 얼굴 이미지·임베딩, 사람별 ID·이름은 MLflow로 전송하지 않습니다. 집계 정보도 민감할 수 있으므로 저장소 접근을 제한하세요.
-- 기록은 약 5초 간격의 동기 전송입니다. 원격 서버 지연은 화면을 잠시 멈출 수 있으며, 기록 실패는 실행 오류로 처리합니다. 서버 주소·권한을 확인하거나 `--mlflow` 없이 실행하세요.
-- MLflow 연동 검증: `.venv/bin/python -m unittest discover -s person_tracking/tests -v`. 선택 의존성이 없으면 MLflow 테스트만 건너뜁니다.
-
-### 6. 정답 기반 탐지·추적 성능 평가
-
-카메라 실행만으로 정확도는 알 수 없습니다. **프레임별 사람 박스와 동일 인물 ID를
-직접 라벨링한 정답**이 있는 영상을 별도 평가해야 합니다.
-실제 FPS는 기존 카메라 `--mlflow` 실행에도 기록되며, 나머지 지표는 아래 평가 명령으로 기록합니다.
-
-```sh
-.venv/bin/python -m pip install -r person_tracking/requirements-evaluation.txt
-.venv/bin/python person_tracking/evaluate_tracking.py \
-  --video data/classroom.avi --ground-truth data/gt.txt \
-  --mlflow --tracking-uri http://127.0.0.1:5000 \
-  --experiment-name classroom-vision --run-name classroom-evaluation
-```
-
-위 경로는 예시이며 실제 영상과 라벨로 바꿔야 합니다. 저장소에는 정답 라벨이 포함되어 있지 않습니다.
-대시보드의 해당 Run → **Metrics**에서 다음 값을 확인합니다. 비율은 0~1이며 높을수록 좋고,
-`id_switches`는 낮을수록 좋습니다. `actual_fps` 단위는 프레임/초입니다.
-
-| 평가 지표 | MLflow 키 | 계산 목적·기준 |
-| --- | --- | --- |
-| Precision / Recall | `precision` / `recall` | ID 확정 전, 중복 제거 후 사람 탐지 박스와 정답을 IoU 0.5로 일대일 매칭한 정밀도·재현율 |
-| IDF1 | `idf1` | 영상 전체의 정답 ID와 확정 세션 ID를 최적으로 대응시킨 Identity F1 |
-| ID Switches | `id_switches` | 같은 정답 인물에 대응한 세션 ID 변경 수. TrackEval CLEAR 기준, 가림 후 변경도 포함 |
-| HOTA | `hota` | TrackEval HOTA. IoU 0.05~0.95의 19개 기준에서 탐지·연결 정확도를 함께 평가한 평균 |
-| Re-ID Accuracy | `reid_accuracy` | 정답상 부재 뒤 첫 복귀 프레임에서 마지막 관측 ID를 되찾은 비율. 아래 문서의 재입장 평가 정의 사용 |
-| Actual FPS | `actual_fps` | 입력 디코딩부터 추적·평가 입력 누적·주기적 로깅까지의 실제 처리 속도. 오프라인 평가는 GUI가 없으므로 카메라 모드와 직접 비교하지 않음 |
-
-`Checking`은 탐지 평가에는 포함하지만 확정 ID가 아니므로 IDF1/HOTA에서는 추적 누락으로 처리합니다.
-Re-ID 평가 가능한 복귀가 없으면 `reid_accuracy`는 기록하지 않으며, `reid_events=0`과
-평가 JSON의 이유를 확인할 수 있습니다. 0%나 100%로 임의 표시하지 않습니다.
-
-집계 결과는 기본 `outputs/evaluation.json`과 Run의 `evaluation/summary.json`에 저장됩니다.
-영상과 라벨은 업로드하지 않으며, 재현성 확인용 SHA-256만 기록합니다.
-라벨 형식, Re-ID 분모와 FPS 측정 범위는
-[사람 추적 README의 평가 안내](person_tracking/README.md#정답-기반-영상-평가)에 정리했습니다.
-
-## 강의실 영상 검증
-
-[AIRC-SMARTCLASS 수업 영상](https://doi.org/10.17632/fw5hs57z78.1) `029.avi`의 첫 30초(25 FPS, 750프레임)를 Apple Silicon MPS에서
-처리했습니다. 세 시점에서 원본을 육안으로 센 인원과 화면에 표시된 박스 수를
-비교했습니다.
-
-| 시점 | 원본에서 확인한 인원 | 모델이 표시한 사람 박스 |
-| --- | ---: | ---: |
-| 00:05 | 8명 | 4개 |
-| 00:15 | 8명 | 3개 |
-| 00:25 | 9명 | 2개 |
-
-왼쪽 앞자리의 `P001`은 세 시점에서 같은 ID로 표시됐습니다. 통로에 있던 한
-사람은 추적이 끊긴 뒤 `P004`에서 `P006`으로 바뀌었습니다. 얼굴 측정은 박스
-단위로 436회 시도했고, 7회에서 비교 점수가 나왔습니다. 멀거나 모니터에 가려진
-사람에게 박스가 빠지는 현상이 인원 집계에 직접 영향을 주었습니다.
-
-## 다음 단계
-
-- 작은 사람 박스와 가림이 많은 자리에서 탐지 누락을 줄입니다.
-- 같은 사람에게 새 번호가 붙는 상황을 영상 구간별로 검증합니다.
-- 학생별 출석 확인과 이탈·복귀 시각을 기록해 출석 후 이탈을 확인합니다.
-- 시험 중 소지품 탐지와 사용 행동 분석을 연결해 감독자가 확인할 장면을 표시합니다.
+시연은 `deploy`, 탐지 모델 실험은 `fine_tuning`을 기준으로 사용합니다.
+개발용 원본 앱의 MLflow·영상 평가 안내는 [개발 기록 문서](docs/EXPERIMENT_TRACKING.md)에
+분리했습니다. 원본 영상·학습 데이터·개인별 특징·로컬 실행 결과는 Git에서 제외하며,
+최종 탐지 가중치 한 개만 배포본에 동봉합니다.
 
 ## 팀 어딜가조
 
@@ -305,13 +125,12 @@ Re-ID 평가 가능한 복귀가 없으면 `reid_accuracy`는 기록하지 않�
 | 목정빈 | 발표 기획, PPT 제작 |
 | 강슬기 | 데이터 수집·분석 |
 
-## 외부 구성요소
+## 출처
 
-BPBreID의 HRNet 코드에는 [Hippocratic License 3.0](person_tracking/vendor/LICENSE.bpbreid)이
-적용됩니다. 출처와 수정 내역은 [BPBreID 안내](person_tracking/vendor/NOTICE.md),
-YuNet과 SFace의 출처 및 이용 조건은 [얼굴 모델 안내](person_tracking/vendor/NOTICE.face-models.md)에
-정리했습니다.
+학습 데이터는 Roboflow의
+[classroom-dodzk v1](https://universe.roboflow.com/reddy-projects-zulke/classroom-dodzk/dataset/1)과
+[ClassRoom](https://universe.roboflow.com/chokoppang/classroom-o4dnp)을 사용했습니다.
+시연 이미지는 팀 제공 수업 영상에서 추출해 얼굴을 가렸습니다.
+기존 개발용 영상 검증에는 [AIRC-SMARTCLASS Part 2](https://doi.org/10.17632/fw5hs57z78.1)를 사용했습니다.
 
-영상 검증에 사용한 `029.avi`는 Van Anh Nguyen Thi, Tu Chu Pham Dinh, Son Le Hoang의
-[AIRC-SMARTCLASS Part 2](https://data.mendeley.com/datasets/fw5hs57z78/1)에 포함돼 있습니다.
-데이터셋은 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)으로 공개됐습니다.
+모델·코드·폰트의 출처와 개별 이용 조건은 **[deploy/NOTICE.md](deploy/NOTICE.md)**에 정리했습니다.

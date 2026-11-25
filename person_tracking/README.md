@@ -1,5 +1,8 @@
 # 실시간 사람 ID 추적
 
+> 최종 파인튜닝 가중치를 사용하는 발표·시연 실행본은 [deploy](../deploy/README.md)입니다.
+> 이 폴더는 실험 관리·평가 기능을 포함한 개발용 원본 앱입니다.
+
 카메라 영상을 처리해 실행 중인 세션에서 사람별 ID를 유지합니다.
 BPBreID 구성요소에는 조건이 있는 [Hippocratic License 3.0](vendor/LICENSE.bpbreid)이
 적용됩니다. 출처와 수정 사항은 [NOTICE](vendor/NOTICE.md)를 확인하세요.
