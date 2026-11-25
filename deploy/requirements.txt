@@ -9,4 +9,4 @@ lap>=0.5.12,<1
 PySide6-Essentials>=6.8.3,<7
 imageio-ffmpeg==0.6.0
 ipykernel>=6.29,<8
-ipywidgets>=8,<9
+cv2-enumerate-cameras==1.4.0

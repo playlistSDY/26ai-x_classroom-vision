@@ -26,6 +26,7 @@
 | BPBreID / HRNet | [BPBreID](https://github.com/VlSomers/bpbreid) | [동봉 라이선스](vendor/LICENSE.bpbreid), [출처·수정 내역](vendor/NOTICE.md). Hippocratic License 3.0의 조건을 유지합니다. |
 | YuNet / SFace | [OpenCV Zoo](https://github.com/opencv/opencv_zoo) | [얼굴 모델 안내](vendor/NOTICE.face-models.md), MIT / Apache-2.0 라이선스 동봉 |
 | Pretendard | [Pretendard](https://github.com/orioncactus/pretendard) | [동봉 폰트 라이선스](assets/fonts/LICENSE.txt), SIL Open Font License |
+| 카메라 이름 | [cv2-enumerate-cameras](https://github.com/lukehugh/cv2_enumerate_cameras) | 운영체제별 카메라 이름·OpenCV 장치 연결 정보를 조회합니다. |
 | 동영상 디코더 | [imageio-ffmpeg](https://github.com/imageio/imageio-ffmpeg) / FFmpeg | 설치 패키지의 FFmpeg 빌드 및 라이선스를 따릅니다. |
 
 보조 모델은 원 출처에서 다운로드합니다. 파일별 URL·SHA-256은
