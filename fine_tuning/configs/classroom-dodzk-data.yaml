@@ -1,0 +1,7 @@
+# Prepared by yolo/prepare_classroom_dodzk.py from the original Roboflow v1.
+path: ../data/roboflow-classroom-dodzk/person
+train: train/images
+val: valid/images
+test: test/images
+names:
+  0: person

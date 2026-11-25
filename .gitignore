@@ -29,7 +29,7 @@ datasets/
 runs/
 *.avi
 *.mp4
-*.mov
+*.[mM][oO][vV]
 *.mkv
 *.zip
 *.tar
@@ -43,3 +43,8 @@ weights/
 *.onnx
 *.safetensors
 *.part
+
+# Office lock files and temporary downloads
+~$*
+*.tmp
+*.download

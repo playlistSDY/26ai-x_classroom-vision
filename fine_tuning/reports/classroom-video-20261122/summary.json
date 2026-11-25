@@ -1,0 +1,73 @@
+{
+  "comparison_date": "2026-11-22",
+  "video": {
+    "sha256": "d7bb2660b52b785d4d9ae969e1c68e63f13ddf0779b4b216cda049133c10a09c",
+    "frames": 1995,
+    "fps": 59.95792426367461,
+    "sample_stride_frames": 15,
+    "sample_count": 133,
+    "sample_encoding": "Shared JPEG frames at quality 95 from original decoded frames"
+  },
+  "inference": {
+    "imgsz": 768,
+    "confidence": 0.25,
+    "iou": 0.7,
+    "agnostic_nms": true,
+    "device": "CUDA:0",
+    "tracking": false
+  },
+  "models": {
+    "single_retrained": {
+      "training_source": "ClassRoom v1 original 450 images, train 316 / val 88 / test 46",
+      "class_names": [
+        "Student",
+        "with-student"
+      ],
+      "training_imgsz": 768,
+      "batch": 4,
+      "seed": 42,
+      "max_epochs": 50,
+      "patience": 10,
+      "completed_epochs": 50,
+      "best_validation_epoch": 40,
+      "best_validation_map50_95": 0.72496,
+      "weights_sha256": "e47694a88a4ebfb6270a41cba7ebbcc9a55692630f93ff25bc6820c53b34ec19",
+      "is_original_report_checkpoint": false
+    },
+    "unified": {
+      "experiment": "upper-body-unified-v2",
+      "weights_sha256": "857c7d671b47292bf81bcae961d230f1b7913dc5894abdef8e626ddabff0edf2",
+      "class_names": [
+        "person"
+      ],
+      "training_imgsz": 640
+    }
+  },
+  "visual_review_seconds": [
+    0,
+    5,
+    10,
+    15,
+    20,
+    25,
+    30,
+    33
+  ],
+  "observations": [
+    "The retrained single-source model often produces large boxes covering furniture or multiple people",
+    "The unified model separates individual upper bodies more consistently in reviewed frames",
+    "The unified model has false positives on the rear board and sometimes an empty chair, plus duplicate boxes and misses"
+  ],
+  "limitations": [
+    "No ground truth boxes: no precision, recall, mAP or counting accuracy computed",
+    "Box count is not the number of correctly detected people",
+    "Retrained single-source checkpoint is not the original report checkpoint",
+    "Sampled-frame detector comparison does not evaluate identity tracking, attendance or full-pipeline FPS"
+  ],
+  "illustration": {
+    "file": "comparison-15s-face-mosaic.png",
+    "ai_edited": true,
+    "scope": "Privacy-edited visual illustration, not a pixel-exact inference artifact; original box/text details can differ",
+    "numeric_source": "sampled-box-counts.csv and actual inference records, not edited illustration"
+  }
+}

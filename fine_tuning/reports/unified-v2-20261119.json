@@ -1,0 +1,185 @@
+{
+  "completed_epochs": 46,
+  "best_validation_epoch": 36,
+  "stop_reason": "early_stopping_patience_10",
+  "imgsz": 640,
+  "baseline_sha256": "9b09cc8bf347f0fc8a5f7657480587f25db09b34bf33b0652110fb03a8ad4fef",
+  "previous_person_sha256": "7b4abe823785407339f5c5c005ecb375a7fcefab1c3a8bfd10dcc185e01d5423",
+  "trained_sha256": "857c7d671b47292bf81bcae961d230f1b7913dc5894abdef8e626ddabff0edf2",
+  "dataset_manifest_sha256": "73607f4d49cbb1f528baf2dc1a485b576f8cbc7bab76fa59487e865ffded950f",
+  "review_ledger_sha256": "2eab7a486ba0e24f0e5b81a5f769b7eb76db816472c9548f716dc60cab80cc11",
+  "environment": {
+    "torch": "2.11.0+cu128",
+    "ultralytics": "8.4.202",
+    "gpu": "NVIDIA RTX A2000"
+  },
+  "limitations": [
+    "Original same-room adjacent-frame splits are retained",
+    "Shared labels include model-assisted visual review, not an independent gold standard",
+    "Detection evaluation only; ID tracking and real installation video not evaluated"
+  ],
+  "test_metrics": {
+    "dodzk": {
+      "baseline": {
+        "images": 235,
+        "boxes": 2351,
+        "metrics/precision(B)": 0.85482777959473,
+        "metrics/recall(B)": 0.5380689068481497,
+        "metrics/mAP50(B)": 0.7114756138133531,
+        "metrics/mAP50-95(B)": 0.5089125033805725,
+        "fitness": 0.5089125033805725,
+        "speed_ms": {
+          "preprocess": 0.41726761239957305,
+          "inference": 3.9783149700057,
+          "loss": 0.0010045304735924335,
+          "postprocess": 0.8520443448202407
+        }
+      },
+      "previous_person": {
+        "images": 235,
+        "boxes": 2351,
+        "metrics/precision(B)": 0.9849083846200983,
+        "metrics/recall(B)": 0.9880901743938749,
+        "metrics/mAP50(B)": 0.9931036894987889,
+        "metrics/mAP50-95(B)": 0.8458142099066853,
+        "fitness": 0.8458142099066853,
+        "speed_ms": {
+          "preprocess": 0.4277166633054297,
+          "inference": 3.53872325429891,
+          "loss": 0.0009772387590814145,
+          "postprocess": 0.38897722285795716
+        }
+      },
+      "unified": {
+        "images": 235,
+        "boxes": 2351,
+        "metrics/precision(B)": 0.9814202584506211,
+        "metrics/recall(B)": 0.9885881684218175,
+        "metrics/mAP50(B)": 0.9926993897612477,
+        "metrics/mAP50-95(B)": 0.8413374403884456,
+        "fitness": 0.8413374403884456,
+        "speed_ms": {
+          "preprocess": 0.44904429505163046,
+          "inference": 3.559461957279672,
+          "loss": 0.0008983953677593394,
+          "postprocess": 0.4105035037277861
+        }
+      }
+    },
+    "shared": {
+      "baseline": {
+        "images": 26,
+        "boxes": 207,
+        "metrics/precision(B)": 0.3543653606822236,
+        "metrics/recall(B)": 0.6231884057971014,
+        "metrics/mAP50(B)": 0.4606943426544883,
+        "metrics/mAP50-95(B)": 0.12661726195783762,
+        "fitness": 0.12661726195783762,
+        "speed_ms": {
+          "preprocess": 0.370864702675205,
+          "inference": 8.849054109305143,
+          "loss": 0.0009492863542758501,
+          "postprocess": 1.1806362487662296
+        }
+      },
+      "previous_person": {
+        "images": 26,
+        "boxes": 207,
+        "metrics/precision(B)": 0.6400604494987961,
+        "metrics/recall(B)": 0.45410628019323673,
+        "metrics/mAP50(B)": 0.49198465583419504,
+        "metrics/mAP50-95(B)": 0.10371794746747336,
+        "fitness": 0.10371794746747336,
+        "speed_ms": {
+          "preprocess": 0.4371910964926848,
+          "inference": 3.6689107700322685,
+          "loss": 0.0013881721175633944,
+          "postprocess": 0.5626337638554665
+        }
+      },
+      "unified": {
+        "images": 26,
+        "boxes": 207,
+        "metrics/precision(B)": 1.0,
+        "metrics/recall(B)": 0.9897419893295247,
+        "metrics/mAP50(B)": 0.995,
+        "metrics/mAP50-95(B)": 0.7284179950120656,
+        "fitness": 0.7284179950120656,
+        "speed_ms": {
+          "preprocess": 0.5390126473055437,
+          "inference": 2.9857544622455654,
+          "loss": 0.0011213840200350834,
+          "postprocess": 0.830637111973304
+        }
+      }
+    }
+  },
+  "training_config": {
+    "weights": "yolo26n.pt",
+    "epochs": 50,
+    "patience": 10,
+    "imgsz": 640,
+    "batch": 4,
+    "workers": 2,
+    "seed": 42,
+    "deterministic": true
+  },
+  "dataset_splits": {
+    "train": {
+      "dodzk": {
+        "images": 764,
+        "boxes": 10131,
+        "backgrounds": 0
+      },
+      "shared": {
+        "images": 176,
+        "boxes": 1504,
+        "backgrounds": 11
+      }
+    },
+    "valid": {
+      "dodzk": {
+        "images": 275,
+        "boxes": 4390,
+        "backgrounds": 0
+      },
+      "shared": {
+        "images": 51,
+        "boxes": 429,
+        "backgrounds": 3
+      }
+    },
+    "test": {
+      "dodzk": {
+        "images": 235,
+        "boxes": 2351,
+        "backgrounds": 0
+      },
+      "shared": {
+        "images": 26,
+        "boxes": 207,
+        "backgrounds": 2
+      }
+    }
+  },
+  "baseline_description": "Original application detector: COCO-pretrained YOLO26n, person class 0 only",
+  "annotation_policy": "visible-upper-body-v1",
+  "shared_review": {
+    "source_images": 450,
+    "accepted_images": 253,
+    "excluded_images": 197,
+    "method": "Visual screening and selected manual/model-assisted annotation; original two classes are not blindly merged"
+  },
+  "first_review": "Prior preparation inherited; 12-image spot check in this revision, not full relabeling",
+  "evaluation": {
+    "split": "test",
+    "classes": [
+      0
+    ],
+    "imgsz": 640,
+    "batch": 4,
+    "device": "RTX A2000",
+    "independent_scene_split": false,
+    "scope": "Upper-body detection; not attendance or ID-tracking accuracy"
+  }
+}

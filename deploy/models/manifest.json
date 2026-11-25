@@ -1,0 +1,41 @@
+{
+  "detector": "upper-body-unified-v2-best.pt",
+  "files": [
+    {
+      "name": "upper-body-unified-v2-best.pt",
+      "sha256": "857c7d671b47292bf81bcae961d230f1b7913dc5894abdef8e626ddabff0edf2",
+      "url": null,
+      "role": "강의실 상반신 탐지 · 통합 v2"
+    },
+    {
+      "name": "yolo26n-pose.pt",
+      "url": "https://github.com/ultralytics/assets/releases/download/v8.4.0/yolo26n-pose.pt",
+      "sha256": "eb3bb8268828aeaf515cec23a4bfafd793944a86fe9af94ba7823609c14522a9",
+      "role": "머리·어깨 검증"
+    },
+    {
+      "name": "aim-ltcc.pth",
+      "url": "https://drive.usercontent.google.com/download?id=1YhFuoEOpnwS2seMxFZzzNt5NySkKBJxk&export=download&confirm=t",
+      "sha256": "490d23a68d535f9a7c1bd0abc3424042069a2d6ad9a4f728fab0cfcb59e19924",
+      "role": "외형 재식별"
+    },
+    {
+      "name": "bpbreid-occluded-duke.pth",
+      "url": "https://drive.usercontent.google.com/download?id=1o12pu04q52vZaqkNZ6gC1RGz6VVATlsb&export=download&confirm=t",
+      "sha256": "96aa67300880df450fc0cd20c4228c212618897572c0ffb3d528eb982721189c",
+      "role": "부분 신체 재식별"
+    },
+    {
+      "name": "face_detection_yunet_2026may.onnx",
+      "url": "https://media.githubusercontent.com/media/opencv/opencv_zoo/48b10fa505aeb51fbd127fc60a5c660040e823b7/models/face_detection_yunet/face_detection_yunet_2026may.onnx",
+      "sha256": "ebafce4e3c118d6554634be5c27ab333b4c047a9a8c3faf1d7cf93101c22f0f0",
+      "role": "얼굴 탐지"
+    },
+    {
+      "name": "face_recognition_sface_2021dec.onnx",
+      "url": "https://media.githubusercontent.com/media/opencv/opencv_zoo/48b10fa505aeb51fbd127fc60a5c660040e823b7/models/face_recognition_sface/face_recognition_sface_2021dec.onnx",
+      "sha256": "0ba9fbfa01b5270c96627c4ef784da859931e02f04419c829e83484087c34e79",
+      "role": "얼굴 비교"
+    }
+  ]
+}
